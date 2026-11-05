@@ -664,11 +664,18 @@
     const gy = snap(cy, view.cell);
     const cell = view.cell;
 
-    // squares butt up against each other: no gap in the lattice
+    // squares butt up against each other: no gap in the lattice, and the light
+    // steps down in bands as it gets further from the ball
     drawSquareLight(ctx, gx, gy, haloRadius(), cell, cell, COLORS.base, (t, sx, sy, c) => {
-      if (t < 0.42) return 0; // the ball itself sits on top here
-      if (bayerSkip(t, 0.84, sx, sy, c)) return 0;
-      return 0.036 + 0.08 * (1 - t);
+      // the light runs all the way in: the ball's own dithered rim leaves gaps,
+      // and an empty ring there read as black pixels hugging the ball
+      if (bayerSkip(t, 0.8, sx, sy, c)) return 0;
+      if (t < 0.38) return 0.26;
+      if (t < 0.52) return 0.225;
+      if (t < 0.64) return 0.175;
+      if (t < 0.76) return 0.13;
+      if (t < 0.88) return 0.09;
+      return 0.055;
     });
   }
 
@@ -864,6 +871,7 @@
   // the longest block stops short of the right edge (--kw-fill, tunable in CSS)
 
   const KW_WIDTH_FILL = 0.86; // fallback when --kw-fill is missing
+  const KW_TEXT_SCALE = 0.7;  // fallback when --kw-text-scale is missing
 
   let kwFrame = 0;
 
@@ -922,9 +930,33 @@
     }
   }
 
+  /* Two-phase sizing: lay the blocks out at the fitted size so their boxes are
+     the reference geometry, freeze those boxes, then shrink the type inside
+     them. So a smaller type never shrinks the block. */
   function applyKwSize(size, step) {
+    for (const block of kwBlocks) {
+      block.style.width = "";
+      block.style.height = "";
+    }
+
+    const textScale =
+      parseFloat(getComputedStyle(keywordsEl).getPropertyValue("--kw-text-scale")) ||
+      KW_TEXT_SCALE;
+
     keywordsEl.style.setProperty("--kw-size", size.toFixed(2) + "px");
+    keywordsEl.style.setProperty("--kw-text-size", size.toFixed(2) + "px");
     keywordsEl.style.setProperty("--kw-step", step.toFixed(2) + "px");
+
+    // phase 1 done: remember the boxes, then shrink the type inside them
+    for (const block of kwBlocks) {
+      block.style.width = block.offsetWidth + "px";
+      block.style.height = block.offsetHeight + "px";
+    }
+
+    keywordsEl.style.setProperty(
+      "--kw-text-size",
+      (size * textScale).toFixed(2) + "px"
+    );
 
     // the corners are cut from a lattice sized by the block, so restep after
     // every refit
