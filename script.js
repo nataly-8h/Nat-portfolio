@@ -786,4 +786,77 @@
 
   resize();
   requestAnimationFrame(loop);
+
+  /* ========================================================================
+     4 — Keyword lines that fill the section
+     ------------------------------------------------------------------------
+     The mockup's proportions are fixed, and every part of them scales with the
+     type: each line steps right by 9.5% of the usable width, and the longest
+     line ("DATA VISUALIZATION") is sized to run from the last step all the way
+     to the right edge. So one measurement per resize is enough to solve for
+     the font size that makes the block span the screen.
+     ======================================================================== */
+
+  const keywordsEl = document.getElementById("keywords");
+  const kwLines = keywordsEl ? Array.from(keywordsEl.querySelectorAll(".kw")) : [];
+
+  const KW_STEP = 0.095;   // horizontal step between lines, share of usable width
+  const KW_LEADING = 1.15; // line-height, matches style.css
+  const KW_FILL = 0.94;    // how much of the available height the block may use
+
+  let kwFrame = 0;
+
+  function kwTextWidth(el) {
+    const probe = el.cloneNode(true);
+    probe.setAttribute("aria-hidden", "true");
+    probe.style.cssText =
+      "position:absolute;left:-99999px;top:0;width:max-content;max-width:none;" +
+      "visibility:hidden;pointer-events:none;padding:0;font-size:100px;";
+    keywordsEl.appendChild(probe);
+    const width = probe.getBoundingClientRect().width;
+    probe.remove();
+    return width || 1;
+  }
+
+  function fitKeywords() {
+    if (!keywordsEl || kwLines.length < 2) return;
+
+    const cs = getComputedStyle(keywordsEl);
+    const availW =
+      keywordsEl.clientWidth -
+      parseFloat(cs.paddingLeft) -
+      parseFloat(cs.paddingRight);
+    const availH =
+      keywordsEl.clientHeight -
+      parseFloat(cs.paddingTop) -
+      parseFloat(cs.paddingBottom);
+    if (!availW || !availH) return;
+
+    const step = availW * KW_STEP;
+    const lastIndent = step * (kwLines.length - 1);
+
+    // widest line at 100px decides the horizontal fit
+    let widest = 0;
+    for (const line of kwLines) widest = Math.max(widest, kwTextWidth(line));
+
+    const fitWidth = (100 * (availW - lastIndent)) / widest;
+    const fitHeight = (availH * KW_FILL) / (kwLines.length * KW_LEADING);
+    const size = Math.max(14, Math.min(fitWidth, fitHeight));
+
+    keywordsEl.style.setProperty("--kw-size", size.toFixed(2) + "px");
+    keywordsEl.style.setProperty("--kw-step", step.toFixed(2) + "px");
+  }
+
+  function queueKeywordFit() {
+    cancelAnimationFrame(kwFrame);
+    kwFrame = requestAnimationFrame(fitKeywords);
+  }
+
+  fitKeywords();
+  window.addEventListener("load", fitKeywords);
+  window.addEventListener("resize", queueKeywordFit, { passive: true });
+  if (document.fonts) document.fonts.ready.then(fitKeywords);
+  if ("ResizeObserver" in window && keywordsEl) {
+    new ResizeObserver(queueKeywordFit).observe(keywordsEl);
+  }
 })();
