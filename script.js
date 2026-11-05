@@ -1,7 +1,7 @@
 /* ==========================================================================
    Nataly Hernandez — Portfolio 2026
    1. Fit the display type to the card
-   2. Timeline: cards in → pixel dissolve → name revealed
+   2. Timeline: colour stack holds → pixel dissolve → name revealed (one shot)
    3. Interactive pixel-ball field on the black background
    ========================================================================== */
 
@@ -440,17 +440,11 @@
   // the whole stack dissolves as one object, so there is a single progress
   const DISSOLVE_DURATION = reduceMotion ? 0.5 : 1.5;
 
-  let phase = "in";
   let dissolveFrame = 0;
-  let holdTimer = 0;
 
   const smoothstep = (x) => x * x * (3 - 2 * x);
 
   function startDissolve() {
-    if (phase === "dissolve" || phase === "out") return;
-
-    phase = "dissolve";
-    body.classList.remove("phase-in", "phase-out");
     body.classList.add("phase-dissolve");
 
     PixelDissolve.begin();
@@ -479,34 +473,12 @@
     dissolveFrame = 0;
     PixelDissolve.end();
 
-    phase = "out";
-    body.classList.remove("phase-in", "phase-dissolve");
+    body.classList.remove("phase-dissolve");
     body.classList.add("phase-out");
   }
 
-  function replay() {
-    if (phase !== "out") return;
-    clearTimeout(holdTimer);
-
-    // rebuild the colour stack, then dissolve it again
-    body.classList.remove("phase-in", "phase-dissolve", "phase-out");
-    phase = "in";
-
-    void stack.offsetWidth; // restart the entrance animations
-    body.classList.add("phase-in");
-
-    holdTimer = setTimeout(startDissolve, reduceMotion ? 900 : 1850);
-  }
-
-  holdTimer = setTimeout(startDissolve, reduceMotion ? 1400 : 2300);
-
-  window.addEventListener("keydown", (e) => {
-    if (phase !== "out") return;
-    if (e.key === " " || e.key === "Enter") {
-      e.preventDefault();
-      replay();
-    }
-  });
+  // one-shot: the stack dissolves once, on load, and stays gone
+  setTimeout(startDissolve, reduceMotion ? 1400 : 2300);
 
   /* ========================================================================
      3 — Pixel ball field
@@ -540,8 +512,10 @@
   const snap = (v, cell) => Math.round(v / cell) * cell;
 
   function resize() {
-    view.w = window.innerWidth;
-    view.h = window.innerHeight;
+    // The canvas is the hero's box, so the field — and the ball — can never
+    // spill into the sections below.
+    view.w = canvas.clientWidth || window.innerWidth;
+    view.h = canvas.clientHeight || window.innerHeight;
     view.dpr = Math.min(2, window.devicePixelRatio || 1);
     view.cell = Math.max(7, Math.min(13, Math.round(Math.min(view.w, view.h) / 88)));
 
@@ -591,6 +565,15 @@
       target = idleTarget(now);
     }
 
+    const pad = view.cell * 7;
+
+    // Keep the follow target inside the hero too, so scrolling the pointer into
+    // the next section leaves the ball parked at the edge of the name area.
+    target = {
+      x: Math.min(view.w - pad, Math.max(pad, target.x)),
+      y: Math.min(view.h - pad, Math.max(pad, target.y)),
+    };
+
     // Springy follow — a little overshoot keeps it playful.
     const k = 120;
     const damping = 15;
@@ -599,7 +582,6 @@
     ball.x += ball.vx * dt;
     ball.y += ball.vy * dt;
 
-    const pad = view.cell * 7;
     ball.x = Math.min(view.w - pad, Math.max(pad, ball.x));
     ball.y = Math.min(view.h - pad, Math.max(pad, ball.y));
 
@@ -760,29 +742,44 @@
   }
 
   let lastTime = performance.now();
+  let heroVisible = true;
+
+  // Stop burning frames while the hero is scrolled out of view.
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver((entries) => {
+      heroVisible = entries[0].isIntersecting;
+      if (heroVisible) lastTime = performance.now();
+    }, { threshold: 0 }).observe(canvas);
+  }
 
   function loop(now) {
     const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) / 1000));
     lastTime = now;
-    update(dt, now);
-    draw(now);
+
+    if (heroVisible) {
+      update(dt, now);
+      draw(now);
+    }
+
     requestAnimationFrame(loop);
   }
 
-  window.addEventListener("pointermove", (e) => {
-    pointer.x = e.clientX;
-    pointer.y = e.clientY;
+  // pointer coordinates are converted into canvas-local space, so the ball
+  // tracks the cursor correctly while the page is scrolled
+  function trackPointer(e) {
+    const rect = canvas.getBoundingClientRect();
+    pointer.x = e.clientX - rect.left;
+    pointer.y = e.clientY - rect.top;
     pointer.active = true;
     pointer.last = performance.now();
-  }, { passive: true });
+  }
+
+  window.addEventListener("pointermove", trackPointer, { passive: true });
 
   window.addEventListener("pointerdown", (e) => {
-    pointer.x = e.clientX;
-    pointer.y = e.clientY;
-    pointer.active = true;
-    pointer.last = performance.now();
-    burst(e.clientX, e.clientY);
-    if (phase === "out") replay();
+    trackPointer(e);
+    const rect = canvas.getBoundingClientRect();
+    burst(e.clientX - rect.left, e.clientY - rect.top);
   }, { passive: true });
 
   window.addEventListener("resize", resize, { passive: true });

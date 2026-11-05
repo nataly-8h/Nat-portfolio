@@ -38,8 +38,6 @@
 
   --display: "Audiowide", "Century Gothic", "Futura", system-ui, sans-serif;
   --mono: "Silkscreen", ui-monospace, "SFMono-Regular", Menlo, monospace;
-
-  --ease: cubic-bezier(0.22, 0.68, 0.16, 1);
 }
 
 * { box-sizing: border-box; }
@@ -48,25 +46,44 @@ html, body { height: 100%; }
 
 body {
   margin: 0;
-  overflow: hidden;
   background: var(--paper);
   color: var(--white);
   font-family: var(--mono);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  overscroll-behavior: none;
+  overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
 }
 
 ::selection { background: var(--lime); color: #000; }
 
 /* --------------------------------------------------------------------------
+   Sections
+   -------------------------------------------------------------------------- */
+
+/* The hero owns the pixel field. It is the ball's playground: the canvas is
+   absolutely positioned inside an overflow-clipped box, so the ball can never
+   escape the name area or follow the pointer into the next section. */
+.hero {
+  position: relative;
+  height: 100svh;
+  min-height: 100svh;
+  overflow: hidden;
+}
+
+/* empty placeholder for the next section */
+.next {
+  height: 100svh;
+  min-height: 100svh;
+}
+
+/* --------------------------------------------------------------------------
    Pixel canvas
    -------------------------------------------------------------------------- */
 
 #field {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 0;
   display: block;
@@ -84,8 +101,8 @@ body {
   z-index: 2;
   display: flex;
   flex-direction: column;
-  height: 100svh;
-  min-height: 100svh;
+  height: 100%;
+  min-height: 100%;
   padding: clamp(20px, 5vh, 58px) clamp(18px, 4.4vw, 72px) clamp(14px, 2.6vh, 36px);
   pointer-events: none;
 }
@@ -250,6 +267,88 @@ body.phase-out .halo { opacity: 1; }
   color: var(--ink);
 }
 
+/* --------------------------------------------------------------------------
+   Role separator — a pixel dot that blinks into an eight-dot asterisk
+   --------------------------------------------------------------------------
+   Design spec: the dot is 7×7 and the asterisk is 17×17, measured against the
+   role line as it renders on the reference artboard (1512×911, where
+   --role-size fits to 23.9px). The role is auto-fitted, so the sizes are
+   expressed in em of that value:
+     7 / 23.9  ≈ 0.293em   →  --sep-dot
+     17 / 23.9 ≈ 0.711em   →  --sep-star  (ratio kept at exactly 7 : 17)
+   On the reference layout they land on 7px and 17px; everywhere else they
+   scale with the type instead of drifting out of proportion.
+   -------------------------------------------------------------------------- */
+
+.sep {
+  --sep-dot: 0.293em;
+  --sep-star: 0.711em;
+
+  position: relative;
+  display: inline-block;
+  width: var(--sep-dot);
+  height: var(--sep-dot);
+  vertical-align: middle;
+}
+
+.sep-dot,
+.sep-star {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: block;
+}
+
+.sep-dot {
+  width: var(--sep-dot);
+  height: var(--sep-dot);
+  background: currentColor;
+}
+
+/* the asterisk replaces the dot, but only once the stack has dissolved */
+.sep-star {
+  width: var(--sep-star);
+  height: var(--sep-star);
+  fill: currentColor;
+  shape-rendering: crispEdges;
+  opacity: 0;
+}
+
+/* While the colour stack is still on screen the separator is just a dot. The
+   blink only starts once phase-out lands the name on the black field. */
+body.phase-out .sep-dot {
+  animation: sep-dot-blink 2s steps(1, end) infinite;
+}
+
+body.phase-out .sep-star {
+  animation: sep-star-blink 2s steps(1, end) infinite;
+}
+
+/* dot holds for 1.2s, then the asterisk flashes in for 0.8s */
+@keyframes sep-dot-blink {
+  0%,   59.99% { opacity: 1; }
+  60%,  100%   { opacity: 0; }
+}
+
+@keyframes sep-star-blink {
+  0%,   59.99% { opacity: 0; }
+  60%,  100%   { opacity: 1; }
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 .plate--under .name {
   color: var(--lime);
   text-shadow: 0 0 52px rgba(200, 243, 84, 0.16);
@@ -263,42 +362,9 @@ body.phase-out .halo { opacity: 1; }
    Pixel-dissolve phases
    -------------------------------------------------------------------------- */
 
+/* The colour stack is on screen from the first paint — no entrance
+   animation. It only ever leaves via the pixel dissolve. */
 .card { opacity: 1; }
-
-body.phase-in .card {
-  animation: card-in 0.95s var(--ease) backwards;
-}
-
-body.phase-in .card:nth-child(3) { animation-delay: 0.02s; }
-body.phase-in .card:nth-child(4) { animation-delay: 0.13s; }
-body.phase-in .card:nth-child(5) { animation-delay: 0.24s; }
-body.phase-in .card:nth-child(6) { animation-delay: 0.35s; }
-
-@keyframes card-in {
-  from {
-    opacity: 0;
-    transform: translateY(2.6%) scale(0.982);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-body.phase-in .plate--over {
-  animation: plate-in 0.85s var(--ease) 0.75s backwards;
-}
-
-@keyframes plate-in {
-  from {
-    opacity: 0;
-    transform: translateY(0.16em);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
 
 /* --------------------------------------------------------------------------
    Pixel-dissolve canvas
@@ -359,52 +425,6 @@ body.phase-out .plate--under .name {
 }
 
 /* --------------------------------------------------------------------------
-   Footer hint
-   -------------------------------------------------------------------------- */
-
-.bottombar {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 20px;
-  font-size: clamp(9px, 0.75vw, 11px);
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: rgba(245, 245, 245, 0.42);
-}
-
-.hint {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0;
-  opacity: 0;
-  transform: translateY(4px);
-  transition: opacity 0.7s ease, transform 0.7s ease;
-}
-
-.bottombar .hint::before {
-  content: "";
-  width: 7px;
-  height: 7px;
-  flex: none;
-  background: var(--pink);
-  box-shadow: 0 0 12px rgba(231, 94, 160, 0.75);
-  animation: blink 2.6s steps(1) infinite;
-}
-
-body.phase-out .hint {
-  opacity: 1;
-  transform: none;
-  transition-delay: 0.9s;
-}
-
-@keyframes blink {
-  0%, 68%   { opacity: 1; }
-  69%, 100% { opacity: 0.22; }
-}
-
-/* --------------------------------------------------------------------------
    Responsive nudges
    -------------------------------------------------------------------------- */
 
@@ -438,12 +458,12 @@ body.phase-out .hint {
    -------------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
-  body.phase-in .card,
-  body.phase-in .plate--over,
   body.phase-out .plate--under .name,
-  .bottombar .hint::before {
+  body.phase-out .sep-dot,
+  body.phase-out .sep-star {
     animation: none;
   }
 
-  .hint { transition-duration: 0.2s; }
+  /* static separator: keep the dot, drop the blink */
+  .sep-dot { opacity: 1; }
 }
