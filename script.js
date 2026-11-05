@@ -785,20 +785,27 @@
 
   const keywordsEl = document.getElementById("keywords");
   const kwLines = keywordsEl ? Array.from(keywordsEl.querySelectorAll(".kw")) : [];
+  const kwBlocks = keywordsEl ? Array.from(keywordsEl.querySelectorAll(".kw-block")) : [];
 
   const KW_STEP = 0.095;   // horizontal step between lines, share of usable width
   const KW_LEADING = 1.15; // line-height, matches style.css
   const KW_FILL = 0.94;    // how much of the available height the block may use
+  // the longest block stops short of the right edge (--kw-fill, tunable in CSS)
+
+  const KW_WIDTH_FILL = 0.86; // fallback when --kw-fill is missing
 
   let kwFrame = 0;
 
   function kwTextWidth(el) {
+    // clone the block as-is: its padding is in em, so it scales with the probe
+    // font size and stays part of the measured footprint
     const probe = el.cloneNode(true);
     probe.setAttribute("aria-hidden", "true");
     probe.style.cssText =
       "position:absolute;left:-99999px;top:0;width:max-content;max-width:none;" +
-      "visibility:hidden;pointer-events:none;padding:0;font-size:100px;";
-    keywordsEl.appendChild(probe);
+      "visibility:hidden;pointer-events:none;white-space:nowrap;font-size:100px;";
+    // appended next to the block so every inherited type property matches
+    (el.parentElement || keywordsEl).appendChild(probe);
     const width = probe.getBoundingClientRect().width;
     probe.remove();
     return width || 1;
@@ -821,16 +828,45 @@
     const step = availW * KW_STEP;
     const lastIndent = step * (kwLines.length - 1);
 
-    // widest line at 100px decides the horizontal fit
+    // widest block at 100px decides the horizontal fit
     let widest = 0;
-    for (const line of kwLines) widest = Math.max(widest, kwTextWidth(line));
+    for (const block of kwBlocks) widest = Math.max(widest, kwTextWidth(block));
 
-    const fitWidth = (100 * (availW - lastIndent)) / widest;
+    const fill =
+      parseFloat(cs.getPropertyValue("--kw-fill")) || KW_WIDTH_FILL;
+    const fitWidth = (100 * (availW - lastIndent) * fill) / widest;
     const fitHeight = (availH * KW_FILL) / (kwLines.length * KW_LEADING);
     const size = Math.max(14, Math.min(fitWidth, fitHeight));
 
     keywordsEl.style.setProperty("--kw-size", size.toFixed(2) + "px");
     keywordsEl.style.setProperty("--kw-step", step.toFixed(2) + "px");
+
+    // the corners are cut from a lattice sized by the block, so restep after
+    // every refit
+    stepKeywordCorners();
+  }
+
+  /* Same treatment as the name cards: the two facing corners are chamfered and
+     quantised to a block lattice, so the diagonal reads as a pixel staircase
+     instead of a smooth cut. */
+  function stepKeywordCorners() {
+    for (const block of kwBlocks) {
+      const w = block.offsetWidth;
+      const h = block.offsetHeight;
+      if (!w || !h) continue;
+
+      const cell = Math.max(4, Math.round(h / 8));
+      const cut = Math.max(cell, Math.round((h * 0.32) / cell) * cell);
+      const pts = pixelChamferPolygon(
+        { x: 0, y: 0, w, h, cutX: cut, cutY: cut },
+        cell
+      );
+
+      block.style.clipPath =
+        "polygon(" +
+        pts.map((p) => p[0].toFixed(1) + "px " + p[1].toFixed(1) + "px").join(", ") +
+        ")";
+    }
   }
 
   function queueKeywordFit() {
@@ -847,15 +883,14 @@
   }
 
   /* ========================================================================
-     5 — Light reflection on the keyword letters
+     5 — The ball lights up the keyword blocks
      ------------------------------------------------------------------------
-     Each keyword line carries a white radial gradient clipped to its glyphs
-     (.kw-text::after in style.css). All this does is keep that gradient centred
-     on the ball and fade it out with distance: the closer the ball, the more of
-     the letters catch the light.
+     Each block carries a white radial gradient over its colour (.kw-block::before
+     in style.css). All this does is keep that gradient centred on the ball and
+     fade it out with distance: the closer the ball, the more the block catches
+     the light. The type stays black on top.
      ======================================================================== */
 
-  const kwTexts = keywordsEl ? Array.from(keywordsEl.querySelectorAll(".kw-text")) : [];
   const REFLECT_RADIUS = 190; // px of reach around the ball
 
   // Cached document-space boxes, refreshed on resize / font load only — no
@@ -865,7 +900,7 @@
 
   function measureKwBoxes() {
     const scrollY = window.scrollY || window.pageYOffset || 0;
-    kwBoxes = kwTexts.map((el) => {
+    kwBoxes = kwBlocks.map((el) => {
       const r = el.getBoundingClientRect();
       return { el, left: r.left, top: r.top + scrollY, w: r.width, h: r.height };
     });
@@ -873,7 +908,7 @@
   }
 
   function reflectLight() {
-    if (!kwTexts.length) return;
+    if (!kwBlocks.length) return;
     if (kwBoxesDirty) measureKwBoxes();
 
     const scrollY = window.scrollY || window.pageYOffset || 0;
@@ -913,6 +948,10 @@
   window.addEventListener("resize", markKwBoxesDirty, { passive: true });
   window.addEventListener("load", markKwBoxesDirty);
   if (document.fonts) document.fonts.ready.then(markKwBoxesDirty);
+  if ("ResizeObserver" in window && keywordsEl) {
+    // blocks change size when the fit changes, so their boxes follow
+    new ResizeObserver(markKwBoxesDirty).observe(keywordsEl);
+  }
 
   reflectLight();
 })();

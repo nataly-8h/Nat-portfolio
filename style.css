@@ -86,6 +86,8 @@ body {
   /* both values are re-fitted in px by script.js; these are the no-JS fallbacks */
   --kw-size: 8.7vw;
   --kw-step: 9.5vw;
+  /* how much of the run-up to the right edge the longest block may use */
+  --kw-fill: 0.86;
 }
 
 .keywords-list {
@@ -103,47 +105,60 @@ body {
    draw a diagonal from top-left to bottom-right — the mockup's staircase. */
 .kw {
   padding-left: calc(var(--i, 0) * var(--kw-step));
+  white-space: nowrap;
+}
+
+/* The colour block. Its stepped corners are stamped on by script.js, using the
+   same block lattice (and the same chamfer helper) as the name cards.
+   All type properties live here, not on .kw, so a detached clone of the block
+   (the fitting probe in script.js) measures the very same face. */
+.kw-block {
+  position: relative;
+  display: inline-block;
+  padding: 0.14em 0.34em 0.2em;
   font-family: var(--mono);
   font-weight: 700;
   font-size: var(--kw-size);
   line-height: 1.15;
   letter-spacing: 0.005em;
   text-transform: uppercase;
-  white-space: nowrap;
-  color: var(--orange);
+  color: var(--ink);
+  background: var(--orange);
+  isolation: isolate;
 }
 
-.kw-text {
-  position: relative;
-  display: inline-block;
-}
-
-/* Light reflection: a white radial gradient centred on the ball, clipped to the
-   glyphs and screened over the colour, so only the letters closest to the ball
-   catch the light. --bx / --by / --glow are set from script.js each frame. */
-.kw-text::after {
-  content: attr(data-text);
+/* Light reflection: a white radial gradient centred on the ball, screened over
+   the block colour and sitting under the black type, so the ball lights up the
+   surface it is passing behind. --bx / --by / --glow come from script.js. */
+.kw-block::before {
+  content: "";
   position: absolute;
-  left: 0;
-  top: 0;
-  white-space: nowrap;
-  color: transparent;
+  inset: 0;
+  z-index: 0;
   background-image: radial-gradient(
-    circle 160px at var(--bx, -9999px) var(--by, -9999px),
-    rgb(255 255 255 / calc(var(--glow, 0) * 0.92)),
-    rgb(255 255 255 / calc(var(--glow, 0) * 0.34)) 32%,
-    rgb(255 255 255 / 0) 68%
+    circle 170px at var(--bx, -9999px) var(--by, -9999px),
+    rgb(255 255 255 / calc(var(--glow, 0) * 0.95)),
+    rgb(255 255 255 / calc(var(--glow, 0) * 0.38)) 34%,
+    rgb(255 255 255 / 0) 72%
   );
-  -webkit-background-clip: text;
-  background-clip: text;
   mix-blend-mode: screen;
   pointer-events: none;
 }
 
-.kw:nth-child(1) { --i: 0; color: var(--orange); }
-.kw:nth-child(2) { --i: 1; color: var(--pink); }
-.kw:nth-child(3) { --i: 2; color: var(--purple); }
-.kw:nth-child(4) { --i: 3; color: var(--lime); }
+.kw-text {
+  position: relative;
+  z-index: 1;
+}
+
+.kw:nth-child(1) { --i: 0; }
+.kw:nth-child(2) { --i: 1; }
+.kw:nth-child(3) { --i: 2; }
+.kw:nth-child(4) { --i: 3; }
+
+.kw:nth-child(1) .kw-block { background: var(--orange); }
+.kw:nth-child(2) .kw-block { background: var(--pink); }
+.kw:nth-child(3) .kw-block { background: var(--purple); }
+.kw:nth-child(4) .kw-block { background: var(--lime); }
 
 /* the pixel mark, bottom-left — a bigger version of the role-line separator,
    blinking on its own (no dissolve phase gates it here) */
@@ -553,6 +568,8 @@ body.phase-out .plate--under .name {
 /* portrait phones: tighten the stair steps and shrink the mark so it stays
    clear of the last keyword */
 @media (max-width: 760px) {
+  /* narrow: let the longest block reach the right edge, it needs the room */
+  .keywords { --kw-fill: 1; }
   .kw-mark { --mark-star: clamp(34px, 6.5vh, 64px); }
 }
 
