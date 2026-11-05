@@ -839,7 +839,6 @@
   const keywordsEl = document.getElementById("keywords");
   const kwLines = keywordsEl ? Array.from(keywordsEl.querySelectorAll(".kw")) : [];
   const kwBlocks = keywordsEl ? Array.from(keywordsEl.querySelectorAll(".kw-block")) : [];
-  const kwMark = keywordsEl ? keywordsEl.querySelector(".kw-mark") : null;
 
   /* One small canvas per block for the light. Drawn in whole cells so a square
      is either lit or absent — never clipped by the edge of the light. */
@@ -921,18 +920,6 @@
       size *= Math.max(0.8, 1 - over / Math.max(1, availW)) * 0.998;
       applyKwSize(size, step);
     }
-
-    syncKeywordsMark();
-  }
-
-  /* The mark hangs under the last block, its right edge on the block's right
-     edge — which moves with --kw-fill, so it is measured rather than assumed. */
-  function syncKeywordsMark() {
-    if (!kwMark || !kwBlocks.length) return;
-    const sectionBox = keywordsEl.getBoundingClientRect();
-    const lastBox = kwBlocks[kwBlocks.length - 1].getBoundingClientRect();
-    const inset = Math.max(0, sectionBox.right - lastBox.right);
-    kwMark.style.right = inset.toFixed(1) + "px";
   }
 
   function applyKwSize(size, step) {

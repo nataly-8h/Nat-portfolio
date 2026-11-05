@@ -94,8 +94,8 @@ body {
   /* both values are re-fitted in px by script.js; these are the no-JS fallbacks */
   --kw-size: 8.7vw;
   --kw-step: 9.5vw;
-  /* how much of the run-up to the right edge the longest block may use */
-  --kw-fill: 0.9;
+  /* 1 = the longest block ends exactly on the right padding */
+  --kw-fill: 1;
   /* the pixel mark: its box, and the gap above it, are reserved under the last
      block so the four blocks plus the mark always fit the section */
   --mark-star: clamp(40px, 8.4vh, 96px);
@@ -168,11 +168,11 @@ body {
 .kw:nth-child(4) .kw-block { background: var(--lime); }
 
 /* the pixel mark — a bigger version of the role-line separator, blinking on its
-   own (no dissolve phase gates it here). It sits under the last block; script.js
-   lines its right edge up with that block's right edge. */
+   own (no dissolve phase gates it here), in the bottom-left corner, below the
+   last block's baseline. */
 .kw-mark {
   position: absolute;
-  right: clamp(18px, 4.4vw, 72px);
+  left: clamp(18px, 4.4vw, 72px);
   bottom: clamp(14px, 2.6vh, 36px);
   color: var(--white);
   line-height: 0;
