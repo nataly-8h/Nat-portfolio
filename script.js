@@ -838,12 +838,38 @@
     const fitHeight = (availH * KW_FILL) / (kwLines.length * KW_LEADING);
     const size = Math.max(14, Math.min(fitWidth, fitHeight));
 
+    applyKwSize(size, step);
+
+    // Safety pass: the maths above is exact for the probe, but rounding and the
+    // real text run can still push a block past the page margin. Measure what
+    // actually rendered and shrink until every block sits inside the padding.
+    for (let i = 0; i < 3; i++) {
+      const over = kwOverflow(cs);
+      if (over <= 0.5) break;
+      size *= Math.max(0.8, 1 - over / Math.max(1, availW)) * 0.998;
+      applyKwSize(size, step);
+    }
+  }
+
+  function applyKwSize(size, step) {
     keywordsEl.style.setProperty("--kw-size", size.toFixed(2) + "px");
     keywordsEl.style.setProperty("--kw-step", step.toFixed(2) + "px");
 
     // the corners are cut from a lattice sized by the block, so restep after
     // every refit
     stepKeywordCorners();
+  }
+
+  // how far the widest block pokes past the right content edge, in px
+  function kwOverflow(cs) {
+    const box = keywordsEl.getBoundingClientRect();
+    const limit = box.right - parseFloat(cs.paddingRight);
+    let over = 0;
+    for (const block of kwBlocks) {
+      const r = block.getBoundingClientRect();
+      over = Math.max(over, r.right - limit);
+    }
+    return over;
   }
 
   /* Same treatment as the name cards: the two facing corners are chamfered and
@@ -866,6 +892,9 @@
         "polygon(" +
         pts.map((p) => p[0].toFixed(1) + "px " + p[1].toFixed(1) + "px").join(", ") +
         ")";
+
+      // the light is drawn on the same lattice as the corners
+      block.style.setProperty("--glow-cell", cell + "px");
     }
   }
 
