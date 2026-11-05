@@ -652,14 +652,18 @@
     return thr > (1 - t) / (1 - from);
   }
 
+  // the size of the ball's glow — the keyword blocks use the very same one
+  function haloRadius() {
+    return (reduceMotion ? 8 : 11) * view.cell;
+  }
+
   function drawHalo(cx, cy) {
     const gx = snap(cx, view.cell);
     const gy = snap(cy, view.cell);
     const cell = view.cell;
-    const size = Math.max(3, cell - 2);
-    const R = (reduceMotion ? 8 : 11) * cell;
 
-    drawSquareLight(ctx, gx, gy, R, cell, size, COLORS.base, (t, sx, sy, c) => {
+    // squares butt up against each other: no gap in the lattice
+    drawSquareLight(ctx, gx, gy, haloRadius(), cell, cell, COLORS.base, (t, sx, sy, c) => {
       if (t < 0.42) return 0; // the ball itself sits on top here
       if (bayerSkip(t, 0.84, sx, sy, c)) return 0;
       return 0.022 + 0.05 * (1 - t);
@@ -964,9 +968,6 @@
     glow.canvas.width = Math.round(w * dpr);
     glow.canvas.height = Math.round(h * dpr);
     glow.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // the light reaches about one and a half block-heights; small blocks get a
-    // smaller pool so the whole chip doesn't wash out
-    glow.radius = Math.max(90, Math.min(260, h * 1.4));
     glow.lit = false; // force a redraw at the new size
   }
 
@@ -992,7 +993,7 @@
      half by the edge. The type stays black on top.
      ======================================================================== */
 
-  const REFLECT_RADIUS = 190; // fallback reach, before a block is measured
+
 
   // Cached document-space boxes, refreshed on resize / font load only — no
   // layout reads inside the animation frame.
@@ -1028,7 +1029,7 @@
       const dy = Math.max(rectTop - ball.y, 0, ball.y - rectBottom);
       const reach = Math.hypot(dx, dy);
 
-      const radius = glow.radius || REFLECT_RADIUS;
+      const radius = haloRadius();
 
       if (reach > radius) {
         if (glow.lit) {
@@ -1038,17 +1039,16 @@
         continue;
       }
 
-      drawGlow(glow, ball.x - box.left, ball.y - rectTop, radius);
+      drawGlow(glow, ball.x - box.left, ball.y - rectTop);
       glow.lit = true;
     }
   }
 
-  /* Same routine as the ball's halo, in white over the block colour: squares on
-     the block's own lattice, only whole squares, brightness stepping outwards
-     and the outer band dithered. */
-  function drawGlow(glow, bx, by, radius) {
-    const cell = glow.cell;
-    const size = Math.max(3, cell - 2);
+  /* The same light the ball gives off, in white over the block colour: same
+     cell size, same reach, squares butted together, and only slightly opaque so
+     the block's own colour still leads. */
+  function drawGlow(glow, bx, by) {
+    const cell = view.cell || 10;
 
     glow.ctx.clearRect(0, 0, glow.w, glow.h);
 
@@ -1056,17 +1056,17 @@
       glow.ctx,
       bx,
       by,
-      radius,
+      haloRadius(),
       cell,
-      size,
+      cell,
       "#ffffff",
       (t, gx, gy, c) => {
         if (bayerSkip(t, 0.72, gx, gy, c)) return 0;
-        if (t < 0.42) return 0.7;
-        if (t < 0.62) return 0.54;
-        if (t < 0.78) return 0.37;
-        if (t < 0.9) return 0.24;
-        return 0.14;
+        if (t < 0.42) return 0.44;
+        if (t < 0.62) return 0.34;
+        if (t < 0.78) return 0.24;
+        if (t < 0.9) return 0.16;
+        return 0.09;
       }
     );
   }
