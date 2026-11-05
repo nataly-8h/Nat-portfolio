@@ -512,10 +512,10 @@
   const snap = (v, cell) => Math.round(v / cell) * cell;
 
   function resize() {
-    // The canvas is the hero's box, so the field — and the ball — can never
-    // spill into the sections below.
-    view.w = canvas.clientWidth || window.innerWidth;
-    view.h = canvas.clientHeight || window.innerHeight;
+    // The field is a fixed layer over the whole page now, so the dust and the
+    // ball are always on screen, in every section.
+    view.w = window.innerWidth;
+    view.h = window.innerHeight;
     view.dpr = Math.min(2, window.devicePixelRatio || 1);
     view.cell = Math.max(7, Math.min(13, Math.round(Math.min(view.w, view.h) / 88)));
 
@@ -567,8 +567,7 @@
 
     const pad = view.cell * 7;
 
-    // Keep the follow target inside the hero too, so scrolling the pointer into
-    // the next section leaves the ball parked at the edge of the name area.
+    // Keep the follow target on screen, wherever the page is scrolled.
     target = {
       x: Math.min(view.w - pad, Math.max(pad, target.x)),
       y: Math.min(view.h - pad, Math.max(pad, target.y)),
@@ -742,34 +741,22 @@
   }
 
   let lastTime = performance.now();
-  let heroVisible = true;
-
-  // Stop burning frames while the hero is scrolled out of view.
-  if ("IntersectionObserver" in window) {
-    new IntersectionObserver((entries) => {
-      heroVisible = entries[0].isIntersecting;
-      if (heroVisible) lastTime = performance.now();
-    }, { threshold: 0 }).observe(canvas);
-  }
 
   function loop(now) {
     const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) / 1000));
     lastTime = now;
 
-    if (heroVisible) {
-      update(dt, now);
-      draw(now);
-    }
+    update(dt, now);
+    draw(now);
+    reflectLight();
 
     requestAnimationFrame(loop);
   }
 
-  // pointer coordinates are converted into canvas-local space, so the ball
-  // tracks the cursor correctly while the page is scrolled
+  // viewport coordinates: the field is fixed, so clientX/Y are canvas coords
   function trackPointer(e) {
-    const rect = canvas.getBoundingClientRect();
-    pointer.x = e.clientX - rect.left;
-    pointer.y = e.clientY - rect.top;
+    pointer.x = e.clientX;
+    pointer.y = e.clientY;
     pointer.active = true;
     pointer.last = performance.now();
   }
@@ -778,8 +765,7 @@
 
   window.addEventListener("pointerdown", (e) => {
     trackPointer(e);
-    const rect = canvas.getBoundingClientRect();
-    burst(e.clientX - rect.left, e.clientY - rect.top);
+    burst(e.clientX, e.clientY);
   }, { passive: true });
 
   window.addEventListener("resize", resize, { passive: true });
@@ -859,4 +845,74 @@
   if ("ResizeObserver" in window && keywordsEl) {
     new ResizeObserver(queueKeywordFit).observe(keywordsEl);
   }
+
+  /* ========================================================================
+     5 — Light reflection on the keyword letters
+     ------------------------------------------------------------------------
+     Each keyword line carries a white radial gradient clipped to its glyphs
+     (.kw-text::after in style.css). All this does is keep that gradient centred
+     on the ball and fade it out with distance: the closer the ball, the more of
+     the letters catch the light.
+     ======================================================================== */
+
+  const kwTexts = keywordsEl ? Array.from(keywordsEl.querySelectorAll(".kw-text")) : [];
+  const REFLECT_RADIUS = 190; // px of reach around the ball
+
+  // Cached document-space boxes, refreshed on resize / font load only — no
+  // layout reads inside the animation frame.
+  let kwBoxes = [];
+  let kwBoxesDirty = true;
+
+  function measureKwBoxes() {
+    const scrollY = window.scrollY || window.pageYOffset || 0;
+    kwBoxes = kwTexts.map((el) => {
+      const r = el.getBoundingClientRect();
+      return { el, left: r.left, top: r.top + scrollY, w: r.width, h: r.height };
+    });
+    kwBoxesDirty = false;
+  }
+
+  function reflectLight() {
+    if (!kwTexts.length) return;
+    if (kwBoxesDirty) measureKwBoxes();
+
+    const scrollY = window.scrollY || window.pageYOffset || 0;
+
+    for (const box of kwBoxes) {
+      const rectTop = box.top - scrollY;
+      const rectRight = box.left + box.w;
+      const rectBottom = rectTop + box.h;
+
+      // distance from the ball to the line's box, not to a point
+      const dx = Math.max(box.left - ball.x, 0, ball.x - rectRight);
+      const dy = Math.max(rectTop - ball.y, 0, ball.y - rectBottom);
+      const dist = Math.hypot(dx, dy);
+      const glow = Math.max(0, 1 - dist / REFLECT_RADIUS);
+
+      const style = box.el.style;
+      if (glow <= 0) {
+        if (box.lit) {
+          style.setProperty("--glow", "0");
+          box.lit = false;
+        }
+        continue;
+      }
+
+      // gradient origin in the element's own coordinate space
+      style.setProperty("--bx", (ball.x - box.left).toFixed(1) + "px");
+      style.setProperty("--by", (ball.y - rectTop).toFixed(1) + "px");
+      style.setProperty("--glow", glow.toFixed(3));
+      box.lit = true;
+    }
+  }
+
+  function markKwBoxesDirty() {
+    kwBoxesDirty = true;
+  }
+
+  window.addEventListener("resize", markKwBoxesDirty, { passive: true });
+  window.addEventListener("load", markKwBoxesDirty);
+  if (document.fonts) document.fonts.ready.then(markKwBoxesDirty);
+
+  reflectLight();
 })();

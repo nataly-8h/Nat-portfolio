@@ -75,6 +75,7 @@ body {
 /* focus areas — four stepped keyword lines filling the viewport */
 .keywords {
   position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   height: 100svh;
@@ -102,14 +103,41 @@ body {
    draw a diagonal from top-left to bottom-right — the mockup's staircase. */
 .kw {
   padding-left: calc(var(--i, 0) * var(--kw-step));
-  font-family: var(--display);
-  font-weight: 400;
+  font-family: var(--mono);
+  font-weight: 700;
   font-size: var(--kw-size);
   line-height: 1.15;
   letter-spacing: 0.005em;
   text-transform: uppercase;
   white-space: nowrap;
   color: var(--orange);
+}
+
+.kw-text {
+  position: relative;
+  display: inline-block;
+}
+
+/* Light reflection: a white radial gradient centred on the ball, clipped to the
+   glyphs and screened over the colour, so only the letters closest to the ball
+   catch the light. --bx / --by / --glow are set from script.js each frame. */
+.kw-text::after {
+  content: attr(data-text);
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  color: transparent;
+  background-image: radial-gradient(
+    circle 160px at var(--bx, -9999px) var(--by, -9999px),
+    rgb(255 255 255 / calc(var(--glow, 0) * 0.92)),
+    rgb(255 255 255 / calc(var(--glow, 0) * 0.34)) 32%,
+    rgb(255 255 255 / 0) 68%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  mix-blend-mode: screen;
+  pointer-events: none;
 }
 
 .kw:nth-child(1) { --i: 0; color: var(--orange); }
@@ -152,7 +180,7 @@ body {
    -------------------------------------------------------------------------- */
 
 #field {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 0;
   display: block;

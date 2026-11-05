@@ -12,11 +12,11 @@
 </head>
 <body>
 
-  <section class="hero" id="hero">
-    <!-- interactive pixel field — scoped to the hero so the ball stays
-         enclosed in the name area while the page scrolls -->
-    <canvas id="field" aria-hidden="true"></canvas>
+  <!-- interactive pixel field: fixed behind every section, so the dust and the
+       ball travel with the page -->
+  <canvas id="field" aria-hidden="true"></canvas>
 
+  <section class="hero" id="hero">
     <div class="page">
     <header class="topbar">
       <span class="label">Portfolio</span>
@@ -56,11 +56,12 @@
   <section class="keywords" id="keywords">
     <h2 class="visually-hidden">Focus areas</h2>
 
+    <!-- data-text mirrors the text for the ::after light-reflection layer -->
     <ul class="keywords-list">
-      <li class="kw">UX Design</li>
-      <li class="kw">Product Design</li>
-      <li class="kw">Computer Science</li>
-      <li class="kw">Data Visualization</li>
+      <li class="kw"><span class="kw-text" data-text="UX Design">UX Design</span></li>
+      <li class="kw"><span class="kw-text" data-text="Product Design">Product Design</span></li>
+      <li class="kw"><span class="kw-text" data-text="Computer Science">Computer Science</span></li>
+      <li class="kw"><span class="kw-text" data-text="Data Visualization">Data Visualization</span></li>
     </ul>
 
     <!-- same pixel mark as the role line, blinking on its own -->
