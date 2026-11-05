@@ -612,21 +612,58 @@
     }
   }
 
+  /* One pixel-light routine for the whole page (the ball's halo and the light
+     the ball throws on the keyword blocks). Squares sit on a cell lattice and
+     nearly touch; a square is only drawn when the whole of it fits inside the
+     radius, so the light is never sliced by its own edge. Brightness is handed
+     in as a function of the normalised distance (0 at the centre, 1 at the rim)
+     so each caller can shape its own falloff. */
+  function drawSquareLight(g, cx, cy, radius, cell, size, color, alphaFor) {
+    const halfDiag = Math.SQRT2 * (size / 2);
+    const inset = (cell - size) / 2;
+    const minX = Math.floor((cx - radius) / cell) * cell;
+    const maxX = cx + radius;
+    const minY = Math.floor((cy - radius) / cell) * cell;
+    const maxY = cy + radius;
+
+    g.fillStyle = color;
+
+    for (let gy = minY; gy < maxY; gy += cell) {
+      for (let gx = minX; gx < maxX; gx += cell) {
+        const d = Math.hypot(gx + cell / 2 - cx, gy + cell / 2 - cy);
+        if (d + halfDiag > radius) continue;
+
+        const alpha = alphaFor(d / radius, gx, gy, cell);
+        if (alpha <= 0) continue;
+
+        g.globalAlpha = alpha;
+        g.fillRect(gx + inset, gy + inset, size, size);
+      }
+    }
+
+    g.globalAlpha = 1;
+  }
+
+  // breaks the outermost band into pixels instead of a hard ring
+  function bayerSkip(t, from, gx, gy, cell) {
+    if (t <= from) return false;
+    const thr =
+      (BAYER[((gx / cell) | 0) % 4][(((gy / cell) | 0) % 4 + 4) % 4] + 0.5) / 16;
+    return thr > (1 - t) / (1 - from);
+  }
+
   function drawHalo(cx, cy) {
     const gx = snap(cx, view.cell);
     const gy = snap(cy, view.cell);
-    const R = reduceMotion ? 8 : 11;
+    const cell = view.cell;
+    const size = Math.max(3, cell - 2);
+    const R = (reduceMotion ? 8 : 11) * cell;
 
-    for (let oy = -R; oy <= R; oy += 2) {
-      for (let ox = -R; ox <= R; ox += 2) {
-        const d = Math.sqrt(ox * ox + oy * oy) / R;
-        if (d < 0.45 || d > 1) continue;
-        const edge = 1 - d;
-        ctx.globalAlpha = 0.03 + edge * 0.07;
-        ctx.fillStyle = COLORS.base;
-        ctx.fillRect(gx + ox * view.cell, gy + oy * view.cell, view.cell, view.cell);
-      }
-    }
+    drawSquareLight(ctx, gx, gy, R, cell, size, COLORS.base, (t, sx, sy, c) => {
+      if (t < 0.42) return 0; // the ball itself sits on top here
+      if (bayerSkip(t, 0.84, sx, sy, c)) return 0;
+      return 0.022 + 0.05 * (1 - t);
+    });
   }
 
   function drawPixelBall(cx, cy, radius, alpha, angle, stretch, isTrail) {
@@ -787,6 +824,24 @@
   const kwLines = keywordsEl ? Array.from(keywordsEl.querySelectorAll(".kw")) : [];
   const kwBlocks = keywordsEl ? Array.from(keywordsEl.querySelectorAll(".kw-block")) : [];
 
+  /* One small canvas per block for the light. Drawn in whole cells so a square
+     is either lit or absent — never clipped by the edge of the light. */
+  const kwGlows = kwBlocks.map((block) => {
+    const canvas = document.createElement("canvas");
+    canvas.className = "kw-glow";
+    canvas.setAttribute("aria-hidden", "true");
+    block.insertBefore(canvas, block.firstChild);
+    return {
+      block,
+      canvas,
+      ctx: canvas.getContext("2d"),
+      w: 0,
+      h: 0,
+      cell: 12,
+      lit: false,
+    };
+  });
+
   const KW_STEP = 0.095;   // horizontal step between lines, share of usable width
   const KW_LEADING = 1.15; // line-height, matches style.css
   const KW_FILL = 0.94;    // how much of the available height the block may use
@@ -894,8 +949,25 @@
         ")";
 
       // the light is drawn on the same lattice as the corners
-      block.style.setProperty("--glow-cell", cell + "px");
+      const glow = kwGlows[kwBlocks.indexOf(block)];
+      if (glow) {
+        glow.cell = cell;
+        sizeGlowCanvas(glow, w, h);
+      }
     }
+  }
+
+  function sizeGlowCanvas(glow, w, h) {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    glow.w = w;
+    glow.h = h;
+    glow.canvas.width = Math.round(w * dpr);
+    glow.canvas.height = Math.round(h * dpr);
+    glow.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // the light reaches about one and a half block-heights; small blocks get a
+    // smaller pool so the whole chip doesn't wash out
+    glow.radius = Math.max(90, Math.min(260, h * 1.4));
+    glow.lit = false; // force a redraw at the new size
   }
 
   function queueKeywordFit() {
@@ -914,13 +986,13 @@
   /* ========================================================================
      5 — The ball lights up the keyword blocks
      ------------------------------------------------------------------------
-     Each block carries a white radial gradient over its colour (.kw-block::before
-     in style.css). All this does is keep that gradient centred on the ball and
-     fade it out with distance: the closer the ball, the more the block catches
-     the light. The type stays black on top.
+     Each block owns a canvas layered over its colour. The light is painted as
+     individual squares on the block's own lattice: a square is drawn only when
+     the whole of it falls inside the light radius, so nothing is ever sliced in
+     half by the edge. The type stays black on top.
      ======================================================================== */
 
-  const REFLECT_RADIUS = 190; // px of reach around the ball
+  const REFLECT_RADIUS = 190; // fallback reach, before a block is measured
 
   // Cached document-space boxes, refreshed on resize / font load only — no
   // layout reads inside the animation frame.
@@ -942,32 +1014,61 @@
 
     const scrollY = window.scrollY || window.pageYOffset || 0;
 
-    for (const box of kwBoxes) {
+    for (let i = 0; i < kwBoxes.length; i++) {
+      const box = kwBoxes[i];
+      const glow = kwGlows[i];
+      if (!glow || !glow.w) continue;
+
       const rectTop = box.top - scrollY;
       const rectRight = box.left + box.w;
       const rectBottom = rectTop + box.h;
 
-      // distance from the ball to the line's box, not to a point
+      // distance from the ball to the block's box, not to a point
       const dx = Math.max(box.left - ball.x, 0, ball.x - rectRight);
       const dy = Math.max(rectTop - ball.y, 0, ball.y - rectBottom);
-      const dist = Math.hypot(dx, dy);
-      const glow = Math.max(0, 1 - dist / REFLECT_RADIUS);
+      const reach = Math.hypot(dx, dy);
 
-      const style = box.el.style;
-      if (glow <= 0) {
-        if (box.lit) {
-          style.setProperty("--glow", "0");
-          box.lit = false;
+      const radius = glow.radius || REFLECT_RADIUS;
+
+      if (reach > radius) {
+        if (glow.lit) {
+          glow.ctx.clearRect(0, 0, glow.w, glow.h);
+          glow.lit = false;
         }
         continue;
       }
 
-      // gradient origin in the element's own coordinate space
-      style.setProperty("--bx", (ball.x - box.left).toFixed(1) + "px");
-      style.setProperty("--by", (ball.y - rectTop).toFixed(1) + "px");
-      style.setProperty("--glow", glow.toFixed(3));
-      box.lit = true;
+      drawGlow(glow, ball.x - box.left, ball.y - rectTop, radius);
+      glow.lit = true;
     }
+  }
+
+  /* Same routine as the ball's halo, in white over the block colour: squares on
+     the block's own lattice, only whole squares, brightness stepping outwards
+     and the outer band dithered. */
+  function drawGlow(glow, bx, by, radius) {
+    const cell = glow.cell;
+    const size = Math.max(3, cell - 2);
+
+    glow.ctx.clearRect(0, 0, glow.w, glow.h);
+
+    drawSquareLight(
+      glow.ctx,
+      bx,
+      by,
+      radius,
+      cell,
+      size,
+      "#ffffff",
+      (t, gx, gy, c) => {
+        if (bayerSkip(t, 0.72, gx, gy, c)) return 0;
+        if (t < 0.42) return 0.7;
+        if (t < 0.62) return 0.54;
+        if (t < 0.78) return 0.37;
+        if (t < 0.9) return 0.24;
+        return 0.14;
+      }
+    );
   }
 
   function markKwBoxesDirty() {

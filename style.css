@@ -135,40 +135,19 @@ body {
   text-transform: uppercase;
   color: var(--ink);
   background: var(--orange);
-  isolation: isolate;
 }
 
-/* Light reflection: pixel squares, not a smooth gradient. The radial light is
-   cut into hard steps and then masked by a grid of square cells (--glow-cell
-   is the same lattice the block corners are stepped on), so the ball lights the
-   block up in blocks — the way its own halo is drawn on the canvas.
-   --bx / --by / --glow come from script.js. */
-.kw-block::before {
-  content: "";
+/* Light reflection. The squares are drawn on a small canvas per block (see
+   script.js) rather than with a gradient, because each square must be either
+   fully lit or absent: a gradient would shave the ones on the edge. The canvas
+   sits above the block colour and under the black type. */
+.kw-glow {
   position: absolute;
   inset: 0;
   z-index: 0;
-  background-image: radial-gradient(
-    circle 180px at var(--bx, -9999px) var(--by, -9999px),
-    rgb(255 255 255 / calc(var(--glow, 0) * 0.95)) 0 16%,
-    rgb(255 255 255 / calc(var(--glow, 0) * 0.78)) 16% 30%,
-    rgb(255 255 255 / calc(var(--glow, 0) * 0.6)) 30% 44%,
-    rgb(255 255 255 / calc(var(--glow, 0) * 0.44)) 44% 58%,
-    rgb(255 255 255 / calc(var(--glow, 0) * 0.3)) 58% 72%,
-    rgb(255 255 255 / calc(var(--glow, 0) * 0.16)) 72% 86%,
-    rgb(255 255 255 / 0) 86%
-  );
-  -webkit-mask-image:
-    repeating-linear-gradient(to bottom, #000 0 62%, transparent 0 100%),
-    repeating-linear-gradient(to right, #000 0 62%, transparent 0 100%);
-  mask-image:
-    repeating-linear-gradient(to bottom, #000 0 62%, transparent 0 100%),
-    repeating-linear-gradient(to right, #000 0 62%, transparent 0 100%);
-  -webkit-mask-size: var(--glow-cell, 9px) var(--glow-cell, 9px);
-  mask-size: var(--glow-cell, 9px) var(--glow-cell, 9px);
-  -webkit-mask-composite: source-in;
-  mask-composite: intersect;
-  mix-blend-mode: screen;
+  display: block;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
 }
 
