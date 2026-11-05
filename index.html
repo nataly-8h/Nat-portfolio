@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nataly Hernandez — Portfolio 2026</title>
+  <meta name="description" content="Nataly Hernandez — UX Designer and Computer Systems Engineer. Portfolio 2026." />
+  <meta name="theme-color" content="#000000" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23c8f354'/><rect x='12' y='12' width='8' height='8' fill='%23e75ea0'/></svg>" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="phase-in">
+
+  <!-- interactive pixel field -->
+  <canvas id="field" aria-hidden="true"></canvas>
+
+  <div class="page">
+    <header class="topbar">
+      <span class="label">Portfolio</span>
+      <span class="label year">2026</span>
+    </header>
+
+    <main class="stage">
+      <div class="stack" id="stack">
+        <div class="halo" aria-hidden="true"></div>
+
+        <!-- Name lives underneath the colour stack: it appears as the cards dissolve -->
+        <div class="plate plate--under">
+          <h1 class="name"><span class="name-line">Nataly</span> <span class="name-line">Hernandez</span></h1>
+          <p class="role">UX Designer&nbsp;·&nbsp;Computer Systems Engineer</p>
+        </div>
+
+        <!-- colour stack -->
+        <div class="card"></div>
+        <div class="card"></div>
+        <div class="card"></div>
+        <div class="card"></div>
+
+        <!-- pixel-art dissolve layer: the colour stack is re-rendered here, block by block -->
+        <canvas id="dissolve" class="dissolve" aria-hidden="true"></canvas>
+
+        <!-- black lettering printed on the top card -->
+        <div class="plate plate--over" aria-hidden="true">
+          <span class="name"><span class="name-line">Nataly</span> <span class="name-line">Hernandez</span></span>
+          <span class="role">UX Designer&nbsp;·&nbsp;Computer Systems Engineer</span>
+        </div>
+      </div>
+    </main>
+
+    <footer class="bottombar">
+      <p class="hint">Click anywhere to replay the dissolve</p>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
