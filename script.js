@@ -647,8 +647,10 @@
   // breaks the outermost band into pixels instead of a hard ring
   function bayerSkip(t, from, gx, gy, cell) {
     if (t <= from) return false;
-    const thr =
-      (BAYER[((gx / cell) | 0) % 4][(((gy / cell) | 0) % 4 + 4) % 4] + 0.5) / 16;
+    // the lattice can run past the left/top edge, so both indices wrap positively
+    const ix = ((((gx / cell) | 0) % 4) + 4) % 4;
+    const iy = ((((gy / cell) | 0) % 4) + 4) % 4;
+    const thr = (BAYER[iy][ix] + 0.5) / 16;
     return thr > (1 - t) / (1 - from);
   }
 
@@ -666,7 +668,7 @@
     drawSquareLight(ctx, gx, gy, haloRadius(), cell, cell, COLORS.base, (t, sx, sy, c) => {
       if (t < 0.42) return 0; // the ball itself sits on top here
       if (bayerSkip(t, 0.84, sx, sy, c)) return 0;
-      return 0.022 + 0.05 * (1 - t);
+      return 0.036 + 0.08 * (1 - t);
     });
   }
 
@@ -783,15 +785,25 @@
 
   let lastTime = performance.now();
 
+  let loopFailed = false;
+
   function loop(now) {
+    // queue the next frame first: one bad frame must never freeze the field
+    requestAnimationFrame(loop);
+
     const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) / 1000));
     lastTime = now;
 
-    update(dt, now);
-    draw(now);
-    reflectLight();
-
-    requestAnimationFrame(loop);
+    try {
+      update(dt, now);
+      draw(now);
+      reflectLight();
+    } catch (err) {
+      if (!loopFailed) {
+        loopFailed = true;
+        console.error("pixel field frame failed", err);
+      }
+    }
   }
 
   // viewport coordinates: the field is fixed, so clientX/Y are canvas coords
