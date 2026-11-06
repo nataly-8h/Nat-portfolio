@@ -134,7 +134,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 0.1em 0.34em;
-  font-family: "Jura", var(--mono);
+  font-family: var(--display);
   font-weight: 400;
   font-size: var(--kw-text-size, var(--kw-size));
   line-height: 1.15;
