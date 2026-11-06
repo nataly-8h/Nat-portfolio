@@ -814,6 +814,7 @@
   let lastTime = performance.now();
 
   let loopFailed = false;
+  let haloClock = 0;
 
   function loop(now) {
     // queue the next frame first: one bad frame must never freeze the field
@@ -826,6 +827,12 @@
       update(dt, now);
       draw(now);
       reflectLight();
+
+      // the name's field breathes, but only once the cards are gone
+      if (now - haloClock > 40 && body.classList.contains("phase-out")) {
+        haloClock = now;
+        paintHeroHalo(now);
+      }
     } catch (err) {
       if (!loopFailed) {
         loopFailed = true;
@@ -1163,7 +1170,131 @@
   reflectLight();
 
   /* ========================================================================
-     6 — Information section corners
+     6 — The green field behind the name
+     ------------------------------------------------------------------------
+     Drawn as a disc of pixel cells on a canvas instead of a CSS gradient, so its
+     squares butt up against each other exactly like the ball's light — banded
+     brightness, dithered rim, nothing soft.
+     ======================================================================== */
+
+  const haloCanvas = stack.querySelector(".halo");
+  const haloCtx = haloCanvas ? haloCanvas.getContext("2d") : null;
+
+  function drawPixelEllipse(g, cx, cy, rx, ry, cell, color, alphaFor) {
+    const grow = (Math.SQRT2 * (cell / 2)) / Math.min(rx, ry);
+    const minX = Math.floor((cx - rx) / cell) * cell;
+    const maxX = cx + rx;
+    const minY = Math.floor((cy - ry) / cell) * cell;
+    const maxY = cy + ry;
+
+    g.fillStyle = color;
+
+    for (let gy = minY; gy < maxY; gy += cell) {
+      for (let gx = minX; gx < maxX; gx += cell) {
+        const px = gx + cell / 2 - cx;
+        const py = gy + cell / 2 - cy;
+        const t = Math.hypot(px / rx, py / ry);
+
+        // whole squares only: nothing on the rim gets sliced
+        if (t + grow > 1) continue;
+
+        const alpha = alphaFor(t, gx, gy, cell);
+        if (alpha <= 0) continue;
+
+        g.globalAlpha = alpha;
+        g.fillRect(gx, gy, cell, cell);
+      }
+    }
+
+    g.globalAlpha = 1;
+  }
+
+  /* Size the bitmap once per layout change; the painting happens every frame so
+     the field can breathe. */
+  let haloW = 0;
+  let haloH = 0;
+  let haloCell = 8;
+
+  function sizeHeroHalo() {
+    if (!haloCanvas || !haloCtx) return false;
+    const w = haloCanvas.clientWidth;
+    const h = haloCanvas.clientHeight;
+    if (!w || !h) return false;
+
+    if (w !== haloW || h !== haloH) {
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      haloCanvas.width = Math.round(w * dpr);
+      haloCanvas.height = Math.round(h * dpr);
+      haloCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      haloW = w;
+      haloH = h;
+    }
+    haloCell = cellSizeFor(stack.getBoundingClientRect().width);
+    return true;
+  }
+
+  /* Slow flicker per cell, like embers: two noise fields two tenths of a second
+     apart, cross-faded, so the squares shimmer instead of strobing. */
+  function emberNoise(i, j, now) {
+    const phase = now * 0.0022;
+    const step = Math.floor(phase);
+    const f = phase - step;
+    const a = hash2(i, j, step);
+    const b = hash2(i, j, step + 1);
+    return a + (b - a) * f;
+  }
+
+  function paintHeroHalo(now) {
+    if (!sizeHeroHalo()) return;
+
+    const w = haloW;
+    const h = haloH;
+
+    // breathing: the field swells and dims a touch
+    const breath = 1 + 0.045 * Math.sin(now * 0.00085);
+    const intensity = 0.92 + 0.08 * Math.sin(now * 0.0012 + 1.1);
+
+    haloCtx.clearRect(0, 0, w, h);
+
+    drawPixelEllipse(
+      haloCtx,
+      w / 2,
+      h / 2,
+      (w / 2) * breath,
+      (h / 2) * breath,
+      haloCell,
+      COLORS.lime,
+      (t, gx, gy, c) => {
+        if (bayerSkip(t, 0.72, gx, gy, c)) return 0;
+
+        // 10% of light at the very centre, stepping down to 2% at the rim
+        let base;
+        if (t < 0.45) base = 0.1;
+        else if (t < 0.62) base = 0.08;
+        else if (t < 0.78) base = 0.06;
+        else if (t < 0.9) base = 0.04;
+        else base = 0.02;
+
+        const ember = 0.82 + 0.36 * emberNoise((gx / c) | 0, (gy / c) | 0, now);
+
+        // the breathing and flicker only ever dim; the centre holds 10% at most
+        return Math.min(0.1, base * intensity * ember);
+      }
+    );
+  }
+
+  // one paint when the page settles, then the ball's loop keeps it alive
+  function drawHeroHalo() {
+    paintHeroHalo(performance.now());
+  }
+
+  drawHeroHalo();
+  window.addEventListener("resize", drawHeroHalo, { passive: true });
+  window.addEventListener("load", drawHeroHalo);
+  if (document.fonts) document.fonts.ready.then(drawHeroHalo);
+
+  /* ========================================================================
+     7 — Information section corners
      ------------------------------------------------------------------------
      The same pixel-stepped chamfer as the name cards, stamped onto the info
      stack's layers so the two sections share one lattice.

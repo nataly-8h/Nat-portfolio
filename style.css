@@ -180,7 +180,8 @@ body {
   position: absolute;
   left: clamp(18px, 4.4vw, 72px);
   bottom: clamp(14px, 2.6vh, 36px);
-  color: var(--white);
+  /* same grey as the "UX Designer" role line */
+  color: rgba(245, 245, 245, 0.62);
   line-height: 0;
 }
 
@@ -324,12 +325,17 @@ body {
 }
 
 /* the green field that swells in behind the name once the cards are gone */
+/* the green field behind the name — drawn as a disc of pixel cells in script.js,
+   so its squares butt up against each other like the ball's light */
 .halo {
+  /* explicit box: a canvas uses its intrinsic size, not inset-stretched edges */
   position: absolute;
   z-index: 0;
-  inset: 12% 8%;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(200, 243, 84, 0.1), rgba(200, 243, 84, 0) 72%);
+  left: 8%;
+  top: 12%;
+  width: 84%;
+  height: 76%;
+  display: block;
   opacity: 0;
   transition: opacity 1.2s ease 0.2s;
   pointer-events: none;
@@ -528,7 +534,6 @@ body.phase-out .sep-star {
 
 .plate--under .name {
   color: var(--lime);
-  text-shadow: 0 0 52px rgba(200, 243, 84, 0.16);
 }
 
 .plate--under .role {
