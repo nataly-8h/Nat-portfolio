@@ -271,6 +271,7 @@ body {
   isolation: isolate;
 }
 
+/* the green field that swells in behind the name once the cards are gone */
 .halo {
   position: absolute;
   z-index: 0;
@@ -486,9 +487,45 @@ body.phase-out .sep-star {
    Pixel-dissolve phases
    -------------------------------------------------------------------------- */
 
-/* The colour stack is on screen from the first paint — no entrance
-   animation. It only ever leaves via the pixel dissolve. */
+/* Entrance: the colour layers arrive one after another from nothing, hold for
+   a few seconds, and then burn away in the pixel dissolve. */
 .card { opacity: 1; }
+
+body.phase-in .card {
+  animation: card-in 0.95s cubic-bezier(0.22, 0.68, 0.16, 1) backwards;
+}
+
+/* the stack's children are .halo, .plate--under, four .card, canvas, .plate--over */
+body.phase-in .card:nth-child(3) { animation-delay: 0.02s; }
+body.phase-in .card:nth-child(4) { animation-delay: 0.13s; }
+body.phase-in .card:nth-child(5) { animation-delay: 0.24s; }
+body.phase-in .card:nth-child(6) { animation-delay: 0.35s; }
+
+body.phase-in .plate--over {
+  animation: plate-in 0.85s cubic-bezier(0.22, 0.68, 0.16, 1) 0.75s backwards;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(2.6%) scale(0.982);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes plate-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.16em);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
 
 /* --------------------------------------------------------------------------
    Pixel-dissolve canvas
@@ -588,6 +625,8 @@ body.phase-out .plate--under .name {
    -------------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
+  body.phase-in .card,
+  body.phase-in .plate--over,
   body.phase-out .plate--under .name,
   body.phase-out .sep-dot,
   body.phase-out .sep-star,

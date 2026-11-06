@@ -445,6 +445,7 @@
   const smoothstep = (x) => x * x * (3 - 2 * x);
 
   function startDissolve() {
+    body.classList.remove("phase-in", "phase-out");
     body.classList.add("phase-dissolve");
 
     PixelDissolve.begin();
@@ -477,8 +478,11 @@
     body.classList.add("phase-out");
   }
 
-  // one-shot: the stack dissolves once, on load, and stays gone
-  setTimeout(startDissolve, reduceMotion ? 1400 : 2300);
+  // one-shot: the layers fade in (0 → 1.6s), hold a couple of seconds, then
+  // burn away. Nothing replays after that.
+  const ENTRANCE_END = reduceMotion ? 0 : 1600;
+  const HOLD = reduceMotion ? 1400 : 2400;
+  setTimeout(startDissolve, ENTRANCE_END + HOLD);
 
   /* ========================================================================
      3 — Pixel ball field
