@@ -202,6 +202,58 @@ body {
   animation: sep-star-blink 2s steps(1, end) infinite;
 }
 
+/* information section — same stacked-card language as the name, wide panel */
+.info {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100svh;
+  min-height: 100svh;
+  padding: clamp(20px, 5vh, 58px) clamp(18px, 4.4vw, 72px);
+}
+
+.info-stack {
+  --o: clamp(2.5px, 0.61vw, 10px); /* diagonal offset between layers */
+  --cutx: 4.35%;                   /* chamfer, horizontal */
+  --cuty: 6.4%;                    /* chamfer, vertical */
+
+  position: relative;
+  /* fills the section's content box: page margins on every side */
+  width: 100%;
+  height: 100%;
+  isolation: isolate;
+}
+
+/* back → front, each layer offset by --o; corners are stepped by script.js */
+.frame {
+  position: absolute;
+  background: var(--c);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--cutx)) 0,
+    100% var(--cuty),
+    100% 100%,
+    var(--cutx) 100%,
+    0 calc(100% - var(--cuty))
+  );
+}
+
+.frame:nth-child(1) { --c: var(--orange); z-index: 1; left: 0; top: 0; right: calc(4 * var(--o)); bottom: calc(4 * var(--o)); }
+.frame:nth-child(2) { --c: var(--pink);   z-index: 2; left: var(--o); top: var(--o); right: calc(3 * var(--o)); bottom: calc(3 * var(--o)); }
+.frame:nth-child(3) { --c: var(--lime);   z-index: 3; left: calc(2 * var(--o)); top: calc(2 * var(--o)); right: calc(2 * var(--o)); bottom: calc(2 * var(--o)); }
+.frame:nth-child(4) { --c: var(--purple); z-index: 4; left: calc(3 * var(--o)); top: calc(3 * var(--o)); right: var(--o); bottom: var(--o); }
+
+.frame--paper {
+  --c: var(--white);
+  z-index: 5;
+  left: calc(4 * var(--o));
+  top: calc(4 * var(--o));
+  right: 0;
+  bottom: 0;
+}
+
 /* --------------------------------------------------------------------------
    Pixel canvas
    -------------------------------------------------------------------------- */

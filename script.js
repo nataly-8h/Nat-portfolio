@@ -140,8 +140,8 @@
     return Math.max(6, Math.min(14, Math.round(width / 150)));
   }
 
-  function chamferFractions() {
-    const cs = getComputedStyle(stack);
+  function chamferFractions(el) {
+    const cs = getComputedStyle(el || stack);
     return {
       x: (parseFloat(cs.getPropertyValue("--cutx")) || 4.35) / 100,
       y: (parseFloat(cs.getPropertyValue("--cuty")) || 6.4) / 100,
@@ -570,12 +570,14 @@
     }
 
     const pad = view.cell * 7;
+    const floorY = ballFloor();
 
-    // Keep the follow target on screen, wherever the page is scrolled.
+    // Keep the follow target on screen, then stop it at the wall.
     target = {
       x: Math.min(view.w - pad, Math.max(pad, target.x)),
       y: Math.min(view.h - pad, Math.max(pad, target.y)),
     };
+    if (floorY < view.h) target.y = Math.min(target.y, floorY);
 
     // Springy follow — a little overshoot keeps it playful.
     const k = 120;
@@ -587,6 +589,9 @@
 
     ball.x = Math.min(view.w - pad, Math.max(pad, ball.x));
     ball.y = Math.min(view.h - pad, Math.max(pad, ball.y));
+    // the wall wins: once the page scrolls past it the ball leaves with the
+    // section instead of riding along into the next one
+    if (floorY < view.h) ball.y = Math.min(ball.y, floorY);
 
     // Trail samples
     trailClock += dt;
@@ -792,6 +797,18 @@
           i % 4 === 0 ? COLORS.lime : i % 3 === 0 ? COLORS.highlight : COLORS.base,
       });
     }
+  }
+
+  const infoSection = document.getElementById("info");
+
+  /* A wall for the ball, in document coordinates: it cannot travel past the
+     bottom edge of the last keyword block, so it never follows the cursor into
+     the section below. Measured by measureBallFloor() further down. */
+  let ballFloorDoc = Infinity;
+
+  function ballFloor() {
+    const scrollY = window.scrollY || window.pageYOffset || 0;
+    return ballFloorDoc - scrollY - view.cell * 1.5;
   }
 
   let lastTime = performance.now();
@@ -1007,6 +1024,18 @@
         sizeGlowCanvas(glow, w, h);
       }
     }
+
+    measureBallFloor();
+  }
+
+  /* The wall sits on the bottom edge of the last keyword block — "DATA
+     VISUALIZATION" — so the ball may roam the hero and the keywords and no
+     further. Kept in document space so it scrolls with the section. */
+  function measureBallFloor() {
+    const last = kwBlocks[kwBlocks.length - 1];
+    if (!last) return;
+    const scrollY = window.scrollY || window.pageYOffset || 0;
+    ballFloorDoc = last.getBoundingClientRect().bottom + scrollY;
   }
 
   function sizeGlowCanvas(glow, w, h) {
@@ -1132,4 +1161,54 @@
   }
 
   reflectLight();
+
+  /* ========================================================================
+     6 — Information section corners
+     ------------------------------------------------------------------------
+     The same pixel-stepped chamfer as the name cards, stamped onto the info
+     stack's layers so the two sections share one lattice.
+     ======================================================================== */
+
+  const infoStack = infoSection ? infoSection.querySelector(".info-stack") : null;
+  const infoFrames = infoStack ? Array.from(infoStack.querySelectorAll(".frame")) : [];
+
+  function stepInfoCorners() {
+    if (!infoStack || !infoFrames.length) return;
+    const width = infoStack.getBoundingClientRect().width;
+    if (!width) return;
+
+    const cell = cellSizeFor(width);
+    const frac = chamferFractions(infoStack);
+
+    for (const frame of infoFrames) {
+      const w = frame.offsetWidth;
+      const h = frame.offsetHeight;
+      if (!w || !h) continue;
+
+      const pts = pixelChamferPolygon(
+        {
+          x: frame.offsetLeft,
+          y: frame.offsetTop,
+          w,
+          h,
+          cutX: w * frac.x,
+          cutY: h * frac.y,
+        },
+        cell
+      );
+
+      frame.style.clipPath =
+        "polygon(" +
+        pts.map((p) => p[0].toFixed(1) + "px " + p[1].toFixed(1) + "px").join(", ") +
+        ")";
+    }
+  }
+
+  stepInfoCorners();
+  window.addEventListener("load", stepInfoCorners);
+  window.addEventListener("resize", stepInfoCorners, { passive: true });
+  if (document.fonts) document.fonts.ready.then(stepInfoCorners);
+  if ("ResizeObserver" in window && infoStack) {
+    new ResizeObserver(stepInfoCorners).observe(infoStack);
+  }
 })();
