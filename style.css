@@ -168,10 +168,20 @@ body {
 .kw:nth-child(3) { --i: 2; }
 .kw:nth-child(4) { --i: 3; }
 
-.kw:nth-child(1) .kw-block { background: var(--orange); }
-.kw:nth-child(2) .kw-block { background: var(--pink); }
-.kw:nth-child(3) .kw-block { background: var(--purple); }
-.kw:nth-child(4) .kw-block { background: var(--lime); }
+.kw:nth-child(1) .kw-block { background: var(--orange); animation-duration: 7.4s; animation-delay: -0.8s; }
+.kw:nth-child(2) .kw-block { background: var(--pink);   animation-duration: 8.6s; animation-delay: -2.9s; }
+.kw:nth-child(3) .kw-block { background: var(--purple); animation-duration: 6.8s; animation-delay: -4.4s; }
+.kw:nth-child(4) .kw-block { background: var(--lime);   animation-duration: 9.2s; animation-delay: -1.7s; }
+
+/* the chips drift, each on its own slow loop */
+.kw-block { animation-name: kw-float; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+
+@keyframes kw-float {
+  0%   { transform: translate3d(0, 0, 0); }
+  33%  { transform: translate3d(0.01em, -0.024em, 0); }
+  66%  { transform: translate3d(-0.008em, 0.012em, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
 
 /* the pixel mark — a bigger version of the role-line separator, blinking on its
    own (no dissolve phase gates it here), in the bottom-left corner, below the
@@ -682,6 +692,10 @@ body.phase-out .plate--under .name {
    -------------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
+  .kw-block {
+    animation: none;
+  }
+
   body.phase-in .card,
   body.phase-in .plate--over,
   body.phase-out .plate--under .name,

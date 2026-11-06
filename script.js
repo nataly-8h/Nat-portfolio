@@ -943,7 +943,7 @@
       parseFloat(cs.getPropertyValue("--kw-fill")) || KW_WIDTH_FILL;
     const fitWidth = (100 * (availW - lastIndent) * fill) / widest;
     const fitHeight = (availH * KW_FILL) / (kwLines.length * KW_LEADING);
-    const size = Math.max(14, Math.min(fitWidth, fitHeight));
+    let size = Math.max(14, Math.min(fitWidth, fitHeight));
 
     applyKwSize(size, step);
 
@@ -975,10 +975,18 @@
     keywordsEl.style.setProperty("--kw-text-size", size.toFixed(2) + "px");
     keywordsEl.style.setProperty("--kw-step", step.toFixed(2) + "px");
 
-    // phase 1 done: remember the boxes, then shrink the type inside them
+    // phase 1 done: remember the boxes, then shrink the type inside them.
+    // Every chip gets the same size — the widest block's width, the tallest
+    // block's height — so the staircase is made of identical boxes.
+    let boxW = 0;
+    let boxH = 0;
     for (const block of kwBlocks) {
-      block.style.width = block.offsetWidth + "px";
-      block.style.height = block.offsetHeight + "px";
+      boxW = Math.max(boxW, block.offsetWidth);
+      boxH = Math.max(boxH, block.offsetHeight);
+    }
+    for (const block of kwBlocks) {
+      block.style.width = boxW + "px";
+      block.style.height = boxH + "px";
     }
 
     keywordsEl.style.setProperty(
@@ -1079,41 +1087,22 @@
 
 
 
-  // Cached document-space boxes, refreshed on resize / font load only — no
-  // layout reads inside the animation frame.
-  let kwBoxes = [];
-  let kwBoxesDirty = true;
-
-  function measureKwBoxes() {
-    const scrollY = window.scrollY || window.pageYOffset || 0;
-    kwBoxes = kwBlocks.map((el) => {
-      const r = el.getBoundingClientRect();
-      return { el, left: r.left, top: r.top + scrollY, w: r.width, h: r.height };
-    });
-    kwBoxesDirty = false;
-  }
-
+  /* The blocks float, so their boxes are read live — four rects a frame is far
+     cheaper than tracking an animation offset by hand. */
   function reflectLight() {
     if (!kwBlocks.length) return;
-    if (kwBoxesDirty) measureKwBoxes();
 
-    const scrollY = window.scrollY || window.pageYOffset || 0;
-
-    for (let i = 0; i < kwBoxes.length; i++) {
-      const box = kwBoxes[i];
+    for (let i = 0; i < kwBlocks.length; i++) {
       const glow = kwGlows[i];
       if (!glow || !glow.w) continue;
 
-      const rectTop = box.top - scrollY;
-      const rectRight = box.left + box.w;
-      const rectBottom = rectTop + box.h;
+      const box = kwBlocks[i].getBoundingClientRect();
+      const radius = haloRadius();
 
       // distance from the ball to the block's box, not to a point
-      const dx = Math.max(box.left - ball.x, 0, ball.x - rectRight);
-      const dy = Math.max(rectTop - ball.y, 0, ball.y - rectBottom);
+      const dx = Math.max(box.left - ball.x, 0, ball.x - box.right);
+      const dy = Math.max(box.top - ball.y, 0, ball.y - box.bottom);
       const reach = Math.hypot(dx, dy);
-
-      const radius = haloRadius();
 
       if (reach > radius) {
         if (glow.lit) {
@@ -1123,7 +1112,7 @@
         continue;
       }
 
-      drawGlow(glow, ball.x - box.left, ball.y - rectTop);
+      drawGlow(glow, ball.x - box.left, ball.y - box.top, radius);
       glow.lit = true;
     }
   }
@@ -1153,18 +1142,6 @@
         return 0.09;
       }
     );
-  }
-
-  function markKwBoxesDirty() {
-    kwBoxesDirty = true;
-  }
-
-  window.addEventListener("resize", markKwBoxesDirty, { passive: true });
-  window.addEventListener("load", markKwBoxesDirty);
-  if (document.fonts) document.fonts.ready.then(markKwBoxesDirty);
-  if ("ResizeObserver" in window && keywordsEl) {
-    // blocks change size when the fit changes, so their boxes follow
-    new ResizeObserver(markKwBoxesDirty).observe(keywordsEl);
   }
 
   reflectLight();
