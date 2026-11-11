@@ -478,9 +478,6 @@
     body.classList.add("phase-out");
   }
 
-  // the focus chips wake up a second after the page loads
-  setTimeout(() => body.classList.add("chips-in"), reduceMotion ? 0 : 1000);
-
   // one-shot: the layers fade in (0 → 1.6s), hold a couple of seconds, then
   // burn away. Nothing replays after that.
   const ENTRANCE_END = reduceMotion ? 0 : 1600;
@@ -881,6 +878,24 @@
     if (!chipsEl) return;
     const scrollY = window.scrollY || window.pageYOffset || 0;
     ballFloorDoc = chipsEl.getBoundingClientRect().bottom + scrollY;
+  }
+
+  /* The chip row sits below the fold, so it wakes up when it scrolls into view
+     rather than on a timer. */
+  if (chipsEl) {
+    if ("IntersectionObserver" in window) {
+      const chipWatch = new IntersectionObserver(
+        (entries) => {
+          if (!entries.some((e) => e.isIntersecting)) return;
+          body.classList.add("chips-in");
+          chipWatch.disconnect();
+        },
+        { threshold: 0.4 }
+      );
+      chipWatch.observe(chipsEl);
+    } else {
+      body.classList.add("chips-in");
+    }
   }
 
   measureBallFloor();
