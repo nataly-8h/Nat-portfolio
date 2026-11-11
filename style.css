@@ -35,10 +35,13 @@
 }
 
 :root {
-  --orange: #ee8c39;
-  --pink: #e75ea0;
-  --purple: #7449ef;
+  /* palette, listed in the order the colours are handed out:
+     green → purple → pink → orange → violet */
   --lime: #c8f354;
+  --purple: #7449ef;
+  --pink: #e75ea0;
+  --orange: #ee8c39;
+  --violet: #a609f0;
 
   --paper: #000000;
   --ink: #000000;
@@ -452,6 +455,7 @@ body {
   list-style: none;
 }
 
+/* the tool names ride on the palette, in its usual order */
 .info-chips li {
   padding: 0.42em 0.6em;
   font-family: var(--mono);
@@ -461,12 +465,13 @@ body {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--ink);
-  background: var(--orange);
+  background: var(--lime);
 }
 
-.info-chips li:nth-child(2) { background: var(--pink); }
-.info-chips li:nth-child(3) { background: var(--purple); color: var(--white); }
-.info-chips li:nth-child(4) { background: var(--lime); }
+.info-chips li:nth-child(2) { background: var(--purple); }
+.info-chips li:nth-child(3) { background: var(--pink); }
+.info-chips li:nth-child(4) { background: var(--orange); }
+.info-chips li:nth-child(5) { background: var(--violet);}
 
 .info-swatches {
   display: flex;
@@ -479,12 +484,13 @@ body {
 .info-swatches li {
   width: clamp(14px, 1.5cqw, 22px);
   height: clamp(5px, 0.55cqw, 8px);
-  background: var(--orange);
+  background: var(--lime);
 }
 
-.info-swatches li:nth-child(2) { background: var(--pink); }
-.info-swatches li:nth-child(3) { background: var(--purple); }
-.info-swatches li:nth-child(4) { background: var(--lime); }
+.info-swatches li:nth-child(2) { background: var(--purple); }
+.info-swatches li:nth-child(3) { background: var(--pink); }
+.info-swatches li:nth-child(4) { background: var(--orange); }
+.info-swatches li:nth-child(5) { background: var(--violet); }
 
 /* the sidebar of dates */
 .info-side {
