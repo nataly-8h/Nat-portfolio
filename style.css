@@ -530,7 +530,7 @@ body {
 .info-year {
   font-family: var(--mono);
   font-weight: 400;
-  font-size: clamp(10.5px, 0.86cqw, 13.5px);
+  font-size: clamp(9px, 0.8cqw, 12px);
   line-height: 1.4;
   color: rgba(0, 0, 0, 0.58);
 }
