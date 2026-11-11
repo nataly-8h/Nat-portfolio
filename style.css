@@ -111,7 +111,7 @@ body {
   padding: 0.5em 0.9em;
   font-family: var(--display);
   font-weight: 400;
-  font-size: clamp(11px, 1.1vw, 15px);
+  font-size: clamp(13px, 1.35vw, 19px);
   line-height: 1;
   letter-spacing: 0.01em;
   text-transform: uppercase;
@@ -397,8 +397,8 @@ body.chips-in .chip:nth-child(4) { transition-delay: 0.54s; }
 /* the tool names ride on the palette, in its usual order */
 .info-chips li {
   padding: 0.42em 0.6em;
-  font-family: var(--mono);
-  font-weight: 400;
+  font-family: "Jura";
+  font-weight: bolder;
   font-size: clamp(10px, 0.78cqw, 12.5px);
   line-height: 1;
   letter-spacing: 0.04em;
@@ -407,10 +407,10 @@ body.chips-in .chip:nth-child(4) { transition-delay: 0.54s; }
   background: var(--lime);
 }
 
-.info-chips li:nth-child(2) { background: var(--purple); }
+.info-chips li:nth-child(2) { background: var(--purple); color: white;}
 .info-chips li:nth-child(3) { background: var(--pink); }
 .info-chips li:nth-child(4) { background: var(--orange); }
-.info-chips li:nth-child(5) { background: var(--violet);}
+.info-chips li:nth-child(5) { background: var(--violet); color: white;}
 
 .info-swatches {
   display: flex;
