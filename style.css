@@ -213,6 +213,7 @@ body {
   animation: sep-star-blink 2s steps(1, end) infinite;
 }
 
+
 /* information section — same stacked-card language as the name, wide panel */
 .info {
   position: relative;
@@ -220,7 +221,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100svh;
+  /* the panel hugs its content; the section only guarantees a full screen */
   min-height: 100svh;
   padding: clamp(20px, 5vh, 58px) clamp(18px, 4.4vw, 72px);
 }
@@ -231,9 +232,10 @@ body {
   --cuty: 6.4%;                    /* chamfer, vertical */
 
   position: relative;
-  /* fills the section's content box: page margins on every side */
+  /* spans the page margins; its height comes from the white card, so the panel
+     hugs its contents instead of stretching to the screen */
   width: 100%;
-  height: 100%;
+  container-type: inline-size;
   isolation: isolate;
 }
 
@@ -251,18 +253,376 @@ body {
   );
 }
 
-.frame:nth-child(1) { --c: var(--orange); z-index: 1; left: 0; top: 0; right: calc(4 * var(--o)); bottom: calc(4 * var(--o)); }
-.frame:nth-child(2) { --c: var(--pink);   z-index: 2; left: var(--o); top: var(--o); right: calc(3 * var(--o)); bottom: calc(3 * var(--o)); }
-.frame:nth-child(3) { --c: var(--lime);   z-index: 3; left: calc(2 * var(--o)); top: calc(2 * var(--o)); right: calc(2 * var(--o)); bottom: calc(2 * var(--o)); }
-.frame:nth-child(4) { --c: var(--purple); z-index: 4; left: calc(3 * var(--o)); top: calc(3 * var(--o)); right: var(--o); bottom: var(--o); }
+/* the layers sit behind the white card, each one step further out up-left */
+.frame:nth-child(1) { --c: var(--orange); z-index: 1; left: 0; top: 0; right: 0; bottom: 0; }
+.frame:nth-child(2) { --c: var(--pink);   z-index: 2; left: var(--o); top: var(--o); right: 0; bottom: 0; }
+.frame:nth-child(3) { --c: var(--lime);   z-index: 3; left: calc(2 * var(--o)); top: calc(2 * var(--o)); right: 0; bottom: 0; }
+.frame:nth-child(4) { --c: var(--purple); z-index: 4; left: calc(3 * var(--o)); top: calc(3 * var(--o)); right: 0; bottom: 0; }
 
+/* the info panel only ever cuts its top-right corner */
+.frame {
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--cutx)) 0,
+    100% var(--cuty),
+    100% 100%,
+    0 100%
+  );
+}
+
+/* the white card is the only layer in flow: it defines the panel's height */
 .frame--paper {
   --c: var(--white);
+  position: relative;
   z-index: 5;
-  left: calc(4 * var(--o));
-  top: calc(4 * var(--o));
-  right: 0;
-  bottom: 0;
+  display: flex;
+  /* roughly 70% of the screen, so the vertical margins echo the side ones */
+  min-height: 70svh;
+  margin: calc(4 * var(--o)) 0 0 calc(4 * var(--o));
+}
+
+/* --------------------------------------------------------------------------
+   Info panel contents
+   --------------------------------------------------------------------------
+   Black ink on the white card, the page's own voices: Audiowide for the
+   statement, Jura for reading copy, Silkscreen for the small labels, and the
+   four accents for the chips and swatches.
+   -------------------------------------------------------------------------- */
+
+.frame--paper { overflow: hidden; }
+
+.info-card {
+  position: relative;
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  column-gap: clamp(18px, 3.2cqw, 54px);
+  row-gap: clamp(12px, 1.6cqw, 26px);
+  padding: clamp(16px, 2.6cqw, 40px);
+  padding-bottom: clamp(24px, 2.9cqw, 44px);
+  color: var(--ink);
+}
+
+/* the wrapper dissolves so the statement and the bio become grid items */
+.info-main { display: contents; }
+
+/* statement across the top of the left column */
+.info-statement {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+/* portrait + bio sit in the middle row */
+.info-about {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+/* the sidebar shares that row and centres itself against the photo and bio */
+.info-side {
+  grid-column: 2;
+  grid-row: 2;
+  justify-content: center;
+}
+
+/* the footer runs the full width of the card */
+.info-foot {
+  grid-column: 1 / -1;
+  grid-row: 3;
+}
+
+/* the opening line */
+.info-statement {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(16px, 2.05cqw, 29px);
+  line-height: 1.24;
+  letter-spacing: 0.005em;
+  max-width: 30ch;
+}
+
+.info-statement em {
+  font-style: normal;
+  box-shadow: inset 0 -0.24em 0 rgba(200, 243, 84, 0.75);
+}
+
+/* portrait + bio */
+.info-about {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: clamp(12px, 1.7cqw, 28px);
+  /* the portrait stretches to the height of the bio beside it */
+  align-items: stretch;
+  min-height: 0;
+  /* sits in the middle of the free space, statement above, contact below */
+  margin-block: auto;
+}
+
+.info-portrait {
+  display: block;
+  width: clamp(104px, 23cqw, 300px);
+  height: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  object-position: 50% 28%;
+  /* the same cut corner language as the cards, one step only */
+  clip-path: polygon(0 0, calc(100% - 9%) 0, 100% 9%, 100% 100%, 0 100%);
+}
+
+.info-copy {
+  max-width: 56ch;
+  /* if the copy ever ends up shorter than the portrait, it sits centred beside
+     it instead of hugging the top edge */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-self: stretch;
+}
+
+.info-copy p {
+  margin: 0 0 0.85em;
+  font-family: "Jura", var(--mono);
+  font-weight: 500;
+  font-size: clamp(11.5px, 1.12cqw, 16px);
+  line-height: 1.55;
+  color: rgba(0, 0, 0, 0.82);
+}
+
+.info-copy p:last-child { margin-bottom: 0; }
+
+.info-copy strong { font-weight: 700; color: var(--ink); }
+
+/* contact, skills, palette */
+.info-foot {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: end;
+  gap: clamp(14px, 2.2cqw, 38px);
+  margin-top: auto;
+  padding-top: clamp(8px, 1.2cqw, 18px);
+}
+
+.info-block { min-width: 0; }
+
+/* the software-skills block sits in the exact middle of the space between the
+   contact column and the swatches */
+.info-foot > .info-block:nth-child(2) {
+  justify-self: center;
+}
+
+.info-label {
+  margin: 0 0 0.9em;
+  font-family: var(--mono);
+  font-weight: 400;
+  font-size: clamp(11px, 0.92cqw, 14px);
+  line-height: 1.1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.62);
+}
+
+.info-label--edu { color: var(--purple); }
+.info-label--exp { color: var(--orange); }
+
+.info-mail {
+  font-family: "Jura", var(--mono);
+  font-weight: 600;
+  font-size: clamp(11px, 1.02cqw, 15px);
+  color: var(--ink);
+  text-decoration: none;
+  padding-bottom: 0.12em;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.28);
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.info-mail:hover,
+.info-mail:focus-visible {
+  color: var(--purple);
+  border-color: var(--purple);
+}
+
+.info-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35em;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.info-chips li {
+  padding: 0.42em 0.6em;
+  font-family: var(--mono);
+  font-weight: 400;
+  font-size: clamp(10px, 0.78cqw, 12.5px);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--orange);
+}
+
+.info-chips li:nth-child(2) { background: var(--pink); }
+.info-chips li:nth-child(3) { background: var(--purple); color: var(--white); }
+.info-chips li:nth-child(4) { background: var(--lime); }
+
+.info-swatches {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.info-swatches li {
+  width: clamp(14px, 1.5cqw, 22px);
+  height: clamp(5px, 0.55cqw, 8px);
+  background: var(--orange);
+}
+
+.info-swatches li:nth-child(2) { background: var(--pink); }
+.info-swatches li:nth-child(3) { background: var(--purple); }
+.info-swatches li:nth-child(4) { background: var(--lime); }
+
+/* the sidebar of dates */
+.info-side {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(18px, 2.6cqw, 44px);
+  min-width: 0;
+  padding-left: clamp(14px, 2.2cqw, 36px);
+}
+
+/* the hairline is measured in script.js so it stops exactly where the bio text
+   stops instead of running to the bottom of the card */
+.info-side::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: var(--info-divider, 100%);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.info-list {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.35cqw, 22px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.info-list li {
+  display: grid;
+  /* one fixed date column for every entry, in both lists, so the titles all
+     start on the same line ("summer 2026" is the widest at 11 characters and
+     Silkscreen is monospaced, so ch is exact) */
+  grid-template-columns: 11ch minmax(0, 1fr);
+  gap: clamp(8px, 1cqw, 16px);
+  align-items: baseline;
+}
+
+.info-year {
+  font-family: var(--mono);
+  font-weight: 400;
+  font-size: clamp(10.5px, 0.86cqw, 13.5px);
+  line-height: 1.4;
+  color: rgba(0, 0, 0, 0.58);
+}
+
+.info-entry strong {
+  display: block;
+  font-family: "Jura", var(--mono);
+  font-weight: 600;
+  font-size: clamp(11.5px, 1.02cqw, 15px);
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.info-org {
+  display: block;
+  margin-top: 0.15em;
+  font-family: "Jura", var(--mono);
+  font-weight: 400;
+  font-size: clamp(10.5px, 0.94cqw, 14px);
+  line-height: 1.3;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+/* the portrait takes the bio's height exactly, so the two read as one block */
+@container (min-width: 640px) {
+  .info-about { align-items: stretch; }
+
+  .info-portrait {
+    aspect-ratio: auto;
+    height: 100%;
+    min-height: 0;
+  }
+}
+
+/* narrow screens: one column, and the card scrolls inside its frame */
+@media (max-width: 760px) {
+  .frame--paper { min-height: 0; }
+
+  .info-card {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    row-gap: clamp(16px, 4vw, 26px);
+    padding-bottom: clamp(24px, 6vw, 36px);
+  }
+
+  .info-statement,
+  .info-about,
+  .info-side,
+  .info-foot {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .info-side { justify-content: flex-start; }
+
+  .info-statement {
+    font-size: clamp(16px, 4.7vw, 22px);
+    max-width: none;
+  }
+
+  /* portrait on its own line, copy underneath at a readable size */
+  .info-about {
+    grid-template-columns: minmax(0, 1fr);
+    margin-block: clamp(4px, 2vw, 12px);
+  }
+
+  .info-portrait { width: clamp(120px, 42vw, 190px); }
+
+  .info-copy { max-width: none; }
+  .info-copy p { font-size: 13px; line-height: 1.6; }
+
+  .info-foot {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: clamp(12px, 4vw, 20px);
+    align-items: start;
+  }
+
+  .info-swatches { grid-column: auto; }
+
+  .info-side {
+    border-top: 1px solid rgba(0, 0, 0, 0.12);
+    padding-left: 0;
+    padding-top: clamp(14px, 4vw, 22px);
+  }
+
+  .info-side::before { display: none; }
+
+  .info-entry strong { font-size: 13px; }
+  .info-org { font-size: 12px; }
+  .info-year { font-size: 12px; }
+  .info-label { font-size: 12px; }
+  .info-chips li { font-size: 10.5px; }
 }
 
 /* --------------------------------------------------------------------------

@@ -187,7 +187,7 @@
     to(right, bottom);
 
     // bottom edge, climbing back up across the bottom-left chamfer
-    if (steps) {
+    if (steps && box.bottomCut !== false) {
       const end = left + box.cutX;
       for (let gx = Math.floor(end / cell - 0.5); gx * cell > left - cell; gx--) {
         const mid = (gx + 0.5) * cell;
@@ -1301,6 +1301,9 @@
           h,
           cutX: w * frac.x,
           cutY: h * frac.y,
+          // only the top-right corner is cut here: the info panel has a square
+          // bottom-left corner
+          bottomCut: false,
         },
         cell
       );
@@ -1312,11 +1315,41 @@
     }
   }
 
-  stepInfoCorners();
-  window.addEventListener("load", stepInfoCorners);
-  window.addEventListener("resize", stepInfoCorners, { passive: true });
-  if (document.fonts) document.fonts.ready.then(stepInfoCorners);
+  /* The hairline between the columns runs from the top of the sidebar down to
+     the bottom of the bio text, so it stops where the words stop. */
+  const infoCopy = infoStack
+    ? infoStack.querySelector(".info-copy")
+    : null;
+  const infoSide = infoStack
+    ? infoStack.querySelector(".info-side")
+    : null;
+  const infoCard = infoStack
+    ? infoStack.querySelector(".info-card")
+    : null;
+
+  function sizeInfoDivider() {
+    if (!infoCopy || !infoSide || !infoCard) return;
+    if (!infoSide.offsetParent) return; // hidden (single-column layout)
+
+    const bio = infoCopy.getBoundingClientRect();
+    const side = infoSide.getBoundingClientRect();
+    // cover the whole sidebar, and never stop before the bio ends
+    const bottom = Math.max(bio.bottom, side.bottom);
+    const height = Math.max(0, bottom - side.top);
+
+    infoCard.style.setProperty("--info-divider", height.toFixed(1) + "px");
+  }
+
+  function layoutInfo() {
+    stepInfoCorners();
+    sizeInfoDivider();
+  }
+
+  layoutInfo();
+  window.addEventListener("load", layoutInfo);
+  window.addEventListener("resize", layoutInfo, { passive: true });
+  if (document.fonts) document.fonts.ready.then(layoutInfo);
   if ("ResizeObserver" in window && infoStack) {
-    new ResizeObserver(stepInfoCorners).observe(infoStack);
+    new ResizeObserver(layoutInfo).observe(infoStack);
   }
 })();
