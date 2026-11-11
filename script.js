@@ -478,6 +478,9 @@
     body.classList.add("phase-out");
   }
 
+  // the focus chips wake up a second after the page loads
+  setTimeout(() => body.classList.add("chips-in"), reduceMotion ? 0 : 1000);
+
   // one-shot: the layers fade in (0 → 1.6s), hold a couple of seconds, then
   // burn away. Nothing replays after that.
   const ENTRANCE_END = reduceMotion ? 0 : 1600;
@@ -749,6 +752,9 @@
       ctx.fillRect(s.x, s.y, view.cell, view.cell);
     }
 
+    // once the wall has pushed the ball above the screen, only the dust is left
+    if (ball.y < -haloRadius()) return;
+
     const speed = Math.hypot(ball.vx, ball.vy);
     const stretch =
       Math.min(0.22, speed / 2200) * (reduceMotion ? 0.3 : 1);
@@ -802,13 +808,14 @@
   const infoSection = document.getElementById("info");
 
   /* A wall for the ball, in document coordinates: it cannot travel past the
-     bottom edge of the last keyword block, so it never follows the cursor into
-     the section below. Measured by measureBallFloor() further down. */
+     bottom edge of the focus chips, so it never follows the cursor into the
+     section below. Measured by measureBallFloor() further down. */
   let ballFloorDoc = Infinity;
 
   function ballFloor() {
     const scrollY = window.scrollY || window.pageYOffset || 0;
-    return ballFloorDoc - scrollY - view.cell * 1.5;
+    // keep the ball's whole body above the chips, not just its centre
+    return ballFloorDoc - scrollY - view.cell * 5.4;
   }
 
   let lastTime = performance.now();
@@ -826,7 +833,7 @@
     try {
       update(dt, now);
       draw(now);
-      reflectLight();
+      drawChipGlows();
 
       // the name's field breathes, but only once the cards are gone
       if (now - haloClock > 40 && body.classList.contains("phase-out")) {
@@ -862,292 +869,114 @@
   requestAnimationFrame(loop);
 
   /* ========================================================================
-     4 — Keyword lines that fill the section
+     4 — The wall under the focus chips
      ------------------------------------------------------------------------
-     The mockup's proportions are fixed, and every part of them scales with the
-     type: each line steps right by 9.5% of the usable width, and the longest
-     line ("DATA VISUALIZATION") is sized to run from the last step all the way
-     to the right edge. So one measurement per resize is enough to solve for
-     the font size that makes the block span the screen.
+     The chips close the hero, so their bottom edge is the ball's floor: it can
+     roam the first screen but never follow the cursor into the info panel.
      ======================================================================== */
 
-  const keywordsEl = document.getElementById("keywords");
-  const kwLines = keywordsEl ? Array.from(keywordsEl.querySelectorAll(".kw")) : [];
-  const kwBlocks = keywordsEl ? Array.from(keywordsEl.querySelectorAll(".kw-block")) : [];
+  const chipsEl = document.querySelector(".chips");
 
-  /* One small canvas per block for the light. Drawn in whole cells so a square
-     is either lit or absent — never clipped by the edge of the light. */
-  const kwGlows = kwBlocks.map((block) => {
+  function measureBallFloor() {
+    if (!chipsEl) return;
+    const scrollY = window.scrollY || window.pageYOffset || 0;
+    ballFloorDoc = chipsEl.getBoundingClientRect().bottom + scrollY;
+  }
+
+  measureBallFloor();
+  window.addEventListener("load", measureBallFloor);
+  window.addEventListener("resize", measureBallFloor, { passive: true });
+  if (document.fonts) document.fonts.ready.then(measureBallFloor);
+  if ("ResizeObserver" in window && chipsEl) {
+    new ResizeObserver(measureBallFloor).observe(chipsEl);
+  }
+
+  /* ------------------------------------------------------------------------
+     Chip halos — when the ball comes near a chip, a pixel halo in that chip's
+     own colour swells around it, drawn the same way as the ball's own light.
+     ------------------------------------------------------------------------ */
+
+  const chipEls = Array.from(document.querySelectorAll(".chip"));
+
+  const chipGlows = chipEls.map((chip) => {
     const canvas = document.createElement("canvas");
-    canvas.className = "kw-glow";
+    canvas.className = "chip-glow";
     canvas.setAttribute("aria-hidden", "true");
-    block.insertBefore(canvas, block.firstChild);
+    chip.appendChild(canvas);
     return {
-      block,
+      chip,
       canvas,
       ctx: canvas.getContext("2d"),
-      w: 0,
-      h: 0,
-      cell: 12,
+      colour: getComputedStyle(chip).backgroundColor,
+      boxW: 0,
+      boxH: 0,
       lit: false,
     };
   });
 
-  const KW_STEP = 0.095;   // horizontal step between lines, share of usable width
-  const KW_LEADING = 1.15; // line-height, matches style.css
-  const KW_FILL = 0.94;    // how much of the available height the block may use
-  // the longest block stops short of the right edge (--kw-fill, tunable in CSS)
+  /* The ball is painted behind the page, so when it slides behind a chip only
+     its light reaches the surface: a very faint patch of white cells, drawn on
+     the chip's own lattice-aligned canvas, under the label. */
+  function paintChipGlow(g, rect) {
+    const cell = view.cell;
+    const w = Math.round(rect.width);
+    const h = Math.round(rect.height);
 
-  const KW_WIDTH_FILL = 0.86; // fallback when --kw-fill is missing
-  const KW_TEXT_SCALE = 0.7;  // fallback when --kw-text-scale is missing
-
-  let kwFrame = 0;
-
-  function kwTextWidth(el) {
-    // clone the block as-is: its padding is in em, so it scales with the probe
-    // font size and stays part of the measured footprint
-    const probe = el.cloneNode(true);
-    probe.setAttribute("aria-hidden", "true");
-    probe.style.cssText =
-      "position:absolute;left:-99999px;top:0;width:max-content;max-width:none;" +
-      "visibility:hidden;pointer-events:none;white-space:nowrap;font-size:100px;";
-    // appended next to the block so every inherited type property matches
-    (el.parentElement || keywordsEl).appendChild(probe);
-    const width = probe.getBoundingClientRect().width;
-    probe.remove();
-    return width || 1;
-  }
-
-  function fitKeywords() {
-    if (!keywordsEl || kwLines.length < 2) return;
-
-    const cs = getComputedStyle(keywordsEl);
-    const availW =
-      keywordsEl.clientWidth -
-      parseFloat(cs.paddingLeft) -
-      parseFloat(cs.paddingRight);
-    const availH =
-      keywordsEl.clientHeight -
-      parseFloat(cs.paddingTop) -
-      parseFloat(cs.paddingBottom);
-    if (!availW || !availH) return;
-
-    const step = availW * KW_STEP;
-    const lastIndent = step * (kwLines.length - 1);
-
-    // widest block at 100px decides the horizontal fit
-    let widest = 0;
-    for (const block of kwBlocks) widest = Math.max(widest, kwTextWidth(block));
-
-    const fill =
-      parseFloat(cs.getPropertyValue("--kw-fill")) || KW_WIDTH_FILL;
-    const fitWidth = (100 * (availW - lastIndent) * fill) / widest;
-    const fitHeight = (availH * KW_FILL) / (kwLines.length * KW_LEADING);
-    let size = Math.max(14, Math.min(fitWidth, fitHeight));
-
-    applyKwSize(size, step);
-
-    // Safety pass: the maths above is exact for the probe, but rounding and the
-    // real text run can still push a block past the page margin. Measure what
-    // actually rendered and shrink until every block sits inside the padding.
-    for (let i = 0; i < 3; i++) {
-      const over = kwOverflow(cs);
-      if (over <= 0.5) break;
-      size *= Math.max(0.8, 1 - over / Math.max(1, availW)) * 0.998;
-      applyKwSize(size, step);
-    }
-  }
-
-  /* Two-phase sizing: lay the blocks out at the fitted size so their boxes are
-     the reference geometry, freeze those boxes, then shrink the type inside
-     them. So a smaller type never shrinks the block. */
-  function applyKwSize(size, step) {
-    for (const block of kwBlocks) {
-      block.style.width = "";
-      block.style.height = "";
+    if (g.boxW !== w || g.boxH !== h) {
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      g.boxW = w;
+      g.boxH = h;
+      g.canvas.width = Math.round(w * dpr);
+      g.canvas.height = Math.round(h * dpr);
+      g.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      g.lit = false;
     }
 
-    const textScale =
-      parseFloat(getComputedStyle(keywordsEl).getPropertyValue("--kw-text-scale")) ||
-      KW_TEXT_SCALE;
-
-    keywordsEl.style.setProperty("--kw-size", size.toFixed(2) + "px");
-    keywordsEl.style.setProperty("--kw-text-size", size.toFixed(2) + "px");
-    keywordsEl.style.setProperty("--kw-step", step.toFixed(2) + "px");
-
-    // phase 1 done: remember the boxes, then shrink the type inside them.
-    // Every chip gets the same size — the widest block's width, the tallest
-    // block's height — so the staircase is made of identical boxes.
-    let boxW = 0;
-    let boxH = 0;
-    for (const block of kwBlocks) {
-      boxW = Math.max(boxW, block.offsetWidth);
-      boxH = Math.max(boxH, block.offsetHeight);
-    }
-    for (const block of kwBlocks) {
-      block.style.width = boxW + "px";
-      block.style.height = boxH + "px";
-    }
-
-    keywordsEl.style.setProperty(
-      "--kw-text-size",
-      (size * textScale).toFixed(2) + "px"
-    );
-
-    // the corners are cut from a lattice sized by the block, so restep after
-    // every refit
-    stepKeywordCorners();
-  }
-
-  // how far the widest block pokes past the right content edge, in px
-  function kwOverflow(cs) {
-    const box = keywordsEl.getBoundingClientRect();
-    const limit = box.right - parseFloat(cs.paddingRight);
-    let over = 0;
-    for (const block of kwBlocks) {
-      const r = block.getBoundingClientRect();
-      over = Math.max(over, r.right - limit);
-    }
-    return over;
-  }
-
-  /* Same treatment as the name cards: the two facing corners are chamfered and
-     quantised to a block lattice, so the diagonal reads as a pixel staircase
-     instead of a smooth cut. */
-  function stepKeywordCorners() {
-    for (const block of kwBlocks) {
-      const w = block.offsetWidth;
-      const h = block.offsetHeight;
-      if (!w || !h) continue;
-
-      const cell = Math.max(4, Math.round(h / 8));
-      const cut = Math.max(cell, Math.round((h * 0.32) / cell) * cell);
-      const pts = pixelChamferPolygon(
-        { x: 0, y: 0, w, h, cutX: cut, cutY: cut },
-        cell
-      );
-
-      block.style.clipPath =
-        "polygon(" +
-        pts.map((p) => p[0].toFixed(1) + "px " + p[1].toFixed(1) + "px").join(", ") +
-        ")";
-
-      // the light is drawn on the same lattice as the corners
-      const glow = kwGlows[kwBlocks.indexOf(block)];
-      if (glow) {
-        glow.cell = cell;
-        sizeGlowCanvas(glow, w, h);
-      }
-    }
-
-    measureBallFloor();
-  }
-
-  /* The wall sits on the bottom edge of the last keyword block — "DATA
-     VISUALIZATION" — so the ball may roam the hero and the keywords and no
-     further. Kept in document space so it scrolls with the section. */
-  function measureBallFloor() {
-    const last = kwBlocks[kwBlocks.length - 1];
-    if (!last) return;
-    const scrollY = window.scrollY || window.pageYOffset || 0;
-    ballFloorDoc = last.getBoundingClientRect().bottom + scrollY;
-  }
-
-  function sizeGlowCanvas(glow, w, h) {
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    glow.w = w;
-    glow.h = h;
-    glow.canvas.width = Math.round(w * dpr);
-    glow.canvas.height = Math.round(h * dpr);
-    glow.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    glow.lit = false; // force a redraw at the new size
-  }
-
-  function queueKeywordFit() {
-    cancelAnimationFrame(kwFrame);
-    kwFrame = requestAnimationFrame(fitKeywords);
-  }
-
-  fitKeywords();
-  window.addEventListener("load", fitKeywords);
-  window.addEventListener("resize", queueKeywordFit, { passive: true });
-  if (document.fonts) document.fonts.ready.then(fitKeywords);
-  if ("ResizeObserver" in window && keywordsEl) {
-    new ResizeObserver(queueKeywordFit).observe(keywordsEl);
-  }
-
-  /* ========================================================================
-     5 — The ball lights up the keyword blocks
-     ------------------------------------------------------------------------
-     Each block owns a canvas layered over its colour. The light is painted as
-     individual squares on the block's own lattice: a square is drawn only when
-     the whole of it falls inside the light radius, so nothing is ever sliced in
-     half by the edge. The type stays black on top.
-     ======================================================================== */
-
-
-
-  /* The blocks float, so their boxes are read live — four rects a frame is far
-     cheaper than tracking an animation offset by hand. */
-  function reflectLight() {
-    if (!kwBlocks.length) return;
-
-    for (let i = 0; i < kwBlocks.length; i++) {
-      const glow = kwGlows[i];
-      if (!glow || !glow.w) continue;
-
-      const box = kwBlocks[i].getBoundingClientRect();
-      const radius = haloRadius();
-
-      // distance from the ball to the block's box, not to a point
-      const dx = Math.max(box.left - ball.x, 0, ball.x - box.right);
-      const dy = Math.max(box.top - ball.y, 0, ball.y - box.bottom);
-      const reach = Math.hypot(dx, dy);
-
-      if (reach > radius) {
-        if (glow.lit) {
-          glow.ctx.clearRect(0, 0, glow.w, glow.h);
-          glow.lit = false;
-        }
-        continue;
-      }
-
-      drawGlow(glow, ball.x - box.left, ball.y - box.top, radius);
-      glow.lit = true;
-    }
-  }
-
-  /* The same light the ball gives off, in white over the block colour: same
-     cell size, same reach, squares butted together, and only slightly opaque so
-     the block's own colour still leads. */
-  function drawGlow(glow, bx, by) {
-    const cell = view.cell || 10;
-
-    glow.ctx.clearRect(0, 0, glow.w, glow.h);
+    const ctx = g.ctx;
+    ctx.clearRect(0, 0, w, h);
 
     drawSquareLight(
-      glow.ctx,
-      bx,
-      by,
+      ctx,
+      ball.x - rect.left,
+      ball.y - rect.top,
       haloRadius(),
       cell,
       cell,
       "#ffffff",
       (t, gx, gy, c) => {
-        if (bayerSkip(t, 0.72, gx, gy, c)) return 0;
-        if (t < 0.42) return 0.44;
-        if (t < 0.62) return 0.34;
-        if (t < 0.78) return 0.24;
-        if (t < 0.9) return 0.16;
-        return 0.09;
+        if (bayerSkip(t, 0.5, gx, gy, c)) return 0;
+        if (t < 0.5) return 0.16;
+        if (t < 0.75) return 0.09;
+        return 0.04;
       }
     );
   }
 
-  reflectLight();
+  function drawChipGlows() {
+    if (!chipGlows.length) return;
+
+    for (const g of chipGlows) {
+      const rect = g.chip.getBoundingClientRect();
+
+      const dx = Math.max(rect.left - ball.x, 0, ball.x - rect.right);
+      const dy = Math.max(rect.top - ball.y, 0, ball.y - rect.bottom);
+      const near = Math.hypot(dx, dy) <= haloRadius();
+
+      if (!near) {
+        if (g.lit) {
+          g.ctx.clearRect(0, 0, g.boxW, g.boxH);
+          g.lit = false;
+        }
+        continue;
+      }
+
+      paintChipGlow(g, rect);
+      g.lit = true;
+    }
+  }
 
   /* ========================================================================
-     6 — The green field behind the name
+     5 — The green field behind the name
      ------------------------------------------------------------------------
      Drawn as a disc of pixel cells on a canvas instead of a CSS gradient, so its
      squares butt up against each other exactly like the ball's light — banded
@@ -1271,7 +1100,7 @@
   if (document.fonts) document.fonts.ready.then(drawHeroHalo);
 
   /* ========================================================================
-     7 — Information section corners
+     6 — Information section corners
      ------------------------------------------------------------------------
      The same pixel-stepped chamfer as the name cards, stamped onto the info
      stack's layers so the two sections share one lattice.
