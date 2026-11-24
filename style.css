@@ -46,6 +46,7 @@
   --paper: #000000;
   --ink: #000000;
   --white: #f5f5f5;
+  --gray: #616161;
 
   --display: "Audiowide", "Century Gothic", "Futura", system-ui, sans-serif;
   --mono: "Silkscreen", ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -755,10 +756,11 @@ body.chips-in .chip:nth-child(4) { transition-delay: 0.54s; }
 .details-kicker {
   margin: 0;
   font-family: var(--mono);
-  font-size: clamp(9px, 0.8vw, 12px);
+  font-size: clamp(10x, 0.8vw, 13px);
+  font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--lime);
+  color: var(--gray);
 }
 
 /* intro: line-art placeholder beside the copy */
@@ -784,14 +786,12 @@ body.chips-in .chip:nth-child(4) { transition-delay: 0.54s; }
 /* the copy's own panel: pink outline, soft bloom fading in from the image side */
 .details-copy {
   display: flex;
-  flex-direction: column;
   justify-content: center;
   justify-self: start;
   /* sits at its natural text width, but never wider than a comfortable measure */
   width: fit-content;
-  max-width: 64ch;
   padding: clamp(14px, 1.8vw, 28px) clamp(16px, 2.2vw, 36px);
-  border: 1.5px solid var(--pink);
+  border: 1.5px dashed var(--pink);
   border-radius: clamp(8px, 1vw, 14px);
   background:
     radial-gradient(
@@ -805,12 +805,11 @@ body.chips-in .chip:nth-child(4) { transition-delay: 0.54s; }
 
 .details-copy p {
   margin: 0 0 1em;
-  max-width: 76ch;
   font-family: "Jura", var(--mono);
-  font-weight: 500;
-  font-size: clamp(11.5px, 0.96vw, 14.5px);
-  line-height: 1.7;
-  color: var(--lime);
+  font-weight: 700;
+  font-size: clamp(14px, 1.5cqw, 17px);
+  line-height: 1.55;
+  color: var(--white);
 }
 
 .details-copy p:last-child { margin-bottom: 0; }
