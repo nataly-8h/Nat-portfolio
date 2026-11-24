@@ -1196,4 +1196,57 @@
   if ("ResizeObserver" in window && infoStack) {
     new ResizeObserver(layoutInfo).observe(infoStack);
   }
+
+  /* ========================================================================
+     7 — Panel corners
+     ------------------------------------------------------------------------
+     The three work panels wear the same stepped corner as the info panel: one
+     cut at the top-right, square everywhere else.
+     ======================================================================== */
+
+  const workPanels = Array.from(document.querySelectorAll(".panel"));
+
+  function stepPanelCorners() {
+    for (const panel of workPanels) {
+      const width = panel.getBoundingClientRect().width;
+      if (!width) continue;
+
+      const cell = cellSizeFor(width);
+      const frac = chamferFractions(panel);
+      const boxes = [
+        panel.querySelector(".panel-card"),
+        ...panel.querySelectorAll(".panel-shadow"),
+      ];
+
+      for (const box of boxes) {
+        if (!box) continue;
+        const w = box.offsetWidth;
+        const h = box.offsetHeight;
+        if (!w || !h) continue;
+
+        const pts = pixelChamferPolygon(
+          {
+            x: 0,
+            y: 0,
+            w,
+            h,
+            cutX: w * frac.x,
+            cutY: h * frac.y,
+            bottomCut: false,
+          },
+          cell
+        );
+
+        box.style.clipPath =
+          "polygon(" +
+          pts.map((p) => p[0].toFixed(1) + "px " + p[1].toFixed(1) + "px").join(", ") +
+          ")";
+      }
+    }
+  }
+
+  stepPanelCorners();
+  window.addEventListener("load", stepPanelCorners);
+  window.addEventListener("resize", stepPanelCorners, { passive: true });
+  if (document.fonts) document.fonts.ready.then(stepPanelCorners);
 })();

@@ -585,6 +585,120 @@ body.chips-in .chip:nth-child(4) { transition-delay: 0.54s; }
 }
 
 /* --------------------------------------------------------------------------
+   Experience and projects — three white panels, one accent each
+   --------------------------------------------------------------------------
+   Same language as the info panel, turned around: the colour layers sit behind
+   the white card and step out to the right and down, so they read as a cast
+   shadow of the panel in a single accent colour.
+   -------------------------------------------------------------------------- */
+
+.work {
+  position: relative;
+  z-index: 2;
+  padding: clamp(36px, 7vh, 110px) clamp(18px, 4.4vw, 72px);
+}
+
+.work-list {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(26px, 5vh, 70px);
+}
+
+.panel {
+  --o: clamp(10px, 0.78vw, 15px);
+  --accent: var(--lime);
+}
+
+.panel--purple { --accent: var(--purple); }
+.panel--pink { --accent: var(--pink); }
+
+.panel-stack {
+  position: relative;
+  /* keeps the card's bottom margin inside the stack, so the shadows can hang
+     below it */
+  display: flow-root;
+}
+
+/* one shadow: the same box as the card, offset a single step to the right and
+   down, in the panel's accent colour */
+.panel-shadow {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  width: calc(100% - var(--o));
+  height: calc(100% - var(--o));
+  background: var(--accent);
+  transform: translate(var(--o), var(--o));
+}
+
+.panel-card {
+  position: relative;
+  z-index: 2;
+  margin: 0 var(--o) var(--o) 0;
+  min-height: clamp(210px, 32vh, 430px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.4vw, 22px);
+  padding: clamp(20px, 3vw, 52px);
+  background: var(--white);
+  color: var(--ink);
+}
+
+/* the muted grey of the role line, with the panel's accent as an underline —
+   accent-coloured type on white was too washed out to read */
+.panel-label {
+  align-self: flex-start;
+  margin: 0;
+  padding-bottom: 0.3em;
+  border-bottom: 2px solid var(--accent);
+  font-family: var(--mono);
+  font-weight: 400;
+  font-size: clamp(10px, 0.82vw, 12.5px);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.58);
+}
+
+.panel-heading {
+  margin: 0;
+  max-width: 22ch;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(19px, 2.3vw, 36px);
+  line-height: 1.18;
+}
+
+.panel-copy {
+  margin: 0;
+  max-width: 58ch;
+  font-family: "Jura", var(--mono);
+  font-weight: 500;
+  font-size: clamp(12px, 1.06vw, 15.5px);
+  line-height: 1.55;
+  color: rgba(0, 0, 0, 0.78);
+}
+
+.panel-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+  margin: auto 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.panel-tags li {
+  padding: 0.42em 0.6em;
+  font-family: var(--mono);
+  font-size: clamp(9px, 0.72vw, 11px);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--accent);
+}
+
+/* --------------------------------------------------------------------------
    Pixel canvas
    -------------------------------------------------------------------------- */
 
