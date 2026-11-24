@@ -743,7 +743,7 @@ body.chips-in .chip:nth-child(4) { transition-delay: 0.54s; }
 
 .details-title {
   margin: 0;
-  font-family: var(--mono);
+  font-family:  "Audiowide";
   font-weight: 400;
   font-size: clamp(30px, 4.8vw, 68px);
   line-height: 1;
@@ -762,33 +762,45 @@ body.chips-in .chip:nth-child(4) { transition-delay: 0.54s; }
 }
 
 /* intro: line-art placeholder beside the copy */
+/* the image sits outside the pink panel and lines up with it: same height,
+   same top edge */
 .details-intro {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: start;
-  gap: clamp(16px, 2.6vw, 44px);
+  grid-template-columns: auto auto;
+  justify-content: start;
+  align-items: stretch;
+  gap: clamp(12px, 1.8vw, 28px);
   margin-top: clamp(18px, 2.6vw, 36px);
 }
 
 .details-art {
-  display: grid;
-  place-items: center;
-  width: clamp(120px, 15vw, 220px);
-  aspect-ratio: 1 / 1.05;
-  border: 1px dashed rgba(200, 243, 84, 0.45);
-  background: repeating-linear-gradient(
-    135deg,
-    rgba(200, 243, 84, 0.07) 0 8px,
-    transparent 8px 16px
-  );
+  display: block;
+  height: clamp(150px, 14.4vw, 236px);
+  width: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
 }
 
-.details-art span {
-  font-family: var(--mono);
-  font-size: clamp(8px, 0.68vw, 10px);
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: rgba(200, 243, 84, 0.55);
+/* the copy's own panel: pink outline, soft bloom fading in from the image side */
+.details-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  justify-self: start;
+  /* sits at its natural text width, but never wider than a comfortable measure */
+  width: fit-content;
+  max-width: 64ch;
+  padding: clamp(14px, 1.8vw, 28px) clamp(16px, 2.2vw, 36px);
+  border: 1.5px solid var(--pink);
+  border-radius: clamp(8px, 1vw, 14px);
+  background:
+    radial-gradient(
+      70% 150% at 50% 50%,
+      rgba(231, 94, 160, 0.2),
+      rgba(231, 94, 160, 0.05) 55%,
+      transparent 76%
+    ),
+    rgba(231, 94, 160, 0.04);
 }
 
 .details-copy p {
@@ -910,11 +922,13 @@ body.chips-in .chip:nth-child(4) { transition-delay: 0.54s; }
 
 /* narrow screens: stack everything, drop the connectors */
 @media (max-width: 860px) {
-  .details-intro { grid-template-columns: minmax(0, 1fr); }
+  .details-intro {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
 
   .details-art {
-    width: clamp(110px, 40vw, 170px);
-    aspect-ratio: 1 / 1;
+    height: clamp(120px, 34vw, 170px);
   }
 
   .details-diagram {
