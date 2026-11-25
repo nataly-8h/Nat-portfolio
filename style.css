@@ -700,10 +700,10 @@ body.chips-in .chip:nth-child(4) { transition-delay: 0.54s; }
 }
 
 /* --------------------------------------------------------------------------
-   Details — project window
+   Details — project panel
    --------------------------------------------------------------------------
-   Pink window on black, a faint graph-paper grid inside, lime line work and
-   lime type: the panel reads like a plotted diagram rather than a slide.
+   The page's own language: a white card on black with a pink cast shadow, ink
+   for the reading, pink as the main colour and lime as the accent.
    -------------------------------------------------------------------------- */
 
 .details {
@@ -716,21 +716,10 @@ body.chips-in .chip:nth-child(4) { transition-delay: 0.54s; }
   position: relative;
   padding: clamp(18px, 2.4vw, 40px) clamp(18px, 2.8vw, 46px)
     clamp(22px, 3vw, 52px);
-  border: 1.5px solid var(--pink);
-  border-radius: clamp(10px, 1.2vw, 18px);
-  background-color: #060506;
-  background-image:
-    repeating-linear-gradient(
-      to right,
-      rgba(150, 205, 120, 0.1) 0 1px,
-      transparent 1px 26px
-    ),
-    repeating-linear-gradient(
-      to bottom,
-      rgba(150, 205, 120, 0.1) 0 1px,
-      transparent 1px 26px
-    );
-  overflow: hidden;
+  background: var(--white);
+  color: var(--ink);
+  /* the same single-colour cast shadow as the work panels, in pink */
+  box-shadow: clamp(6px, 0.72vw, 12px) clamp(6px, 0.72vw, 12px) 0 var(--pink);
 }
 
 /* title left, category right */
@@ -744,28 +733,27 @@ body.chips-in .chip:nth-child(4) { transition-delay: 0.54s; }
 
 .details-title {
   margin: 0;
-  font-family:  "Audiowide";
+  font-family: var(--display);
   font-weight: 400;
-  font-size: clamp(30px, 4.8vw, 68px);
+  font-size: clamp(30px, 5.2vw, 76px);
   line-height: 1;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.005em;
   text-transform: uppercase;
   color: var(--pink);
 }
 
 .details-kicker {
   margin: 0;
+  padding-bottom: 0.5em;
+  border-bottom: 2px solid var(--pink);
   font-family: var(--mono);
-  font-size: clamp(10x, 0.8vw, 13px);
-  font-weight: 700;
-  letter-spacing: 0.18em;
+  font-size: clamp(9px, 0.78vw, 11.5px);
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--gray);
+  color: rgba(0, 0, 0, 0.55);
 }
 
-/* intro: line-art placeholder beside the copy */
-/* the image sits outside the pink panel and lines up with it: same height,
-   same top edge */
+/* intro: the image sits outside the panel, level with it */
 .details-intro {
   display: grid;
   grid-template-columns: auto auto;
@@ -783,40 +771,41 @@ body.chips-in .chip:nth-child(4) { transition-delay: 0.54s; }
   object-fit: contain;
 }
 
-/* the copy's own panel: pink outline, soft bloom fading in from the image side */
 .details-copy {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   justify-self: start;
-  /* sits at its natural text width, but never wider than a comfortable measure */
   width: fit-content;
+  max-width: 64ch;
   padding: clamp(14px, 1.8vw, 28px) clamp(16px, 2.2vw, 36px);
-  border: 1.5px dashed var(--pink);
+  border: 1.5px solid var(--pink);
   border-radius: clamp(8px, 1vw, 14px);
   background:
     radial-gradient(
-      70% 150% at 50% 50%,
-      rgba(231, 94, 160, 0.2),
-      rgba(231, 94, 160, 0.05) 55%,
+      70% 150% at 8% 50%,
+      rgba(231, 94, 160, 0.14),
+      rgba(231, 94, 160, 0.04) 55%,
       transparent 76%
     ),
-    rgba(231, 94, 160, 0.04);
+    rgba(231, 94, 160, 0.03);
 }
 
 .details-copy p {
-  margin: 0 0 1em;
+  margin: 0 0 0.85em;
+  max-width: 76ch;
   font-family: "Jura", var(--mono);
-  font-weight: 700;
-  font-size: clamp(14px, 1.5cqw, 17px);
-  line-height: 1.55;
-  color: var(--white);
+  font-weight: 500;
+  font-size: clamp(11.5px, 0.96vw, 14.5px);
+  line-height: 1.7;
+  color: rgba(0, 0, 0, 0.78);
 }
 
 .details-copy p:last-child { margin-bottom: 0; }
 
-/* the diagram: labels either side, connected to a white hub by dashed rules */
+/* the diagram: labels either side, joined to a lime hub by right angles */
 .details-diagram {
-  --dg-line: rgba(200, 243, 84, 0.55);
+  --dg-line: rgba(231, 94, 160, 0.6);
 
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -834,7 +823,6 @@ body.chips-in .chip:nth-child(4) { transition-delay: 0.54s; }
   list-style: none;
 }
 
-/* the two bus lines the connectors meet: straight down, never diagonal */
 .diagram-side--left {
   align-items: flex-end;
   text-align: right;
@@ -856,10 +844,9 @@ body.chips-in .chip:nth-child(4) { transition-delay: 0.54s; }
   font-size: clamp(8px, 0.72vw, 10.5px);
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--lime);
+  color: rgba(0, 0, 0, 0.6);
 }
 
-/* the dashed connector, growing from the label to the bus — horizontal only */
 .diagram-side--left .diagram-label::after,
 .diagram-side--right .diagram-label::before {
   content: "";
@@ -874,11 +861,10 @@ body.chips-in .chip:nth-child(4) { transition-delay: 0.54s; }
   position: relative;
   width: clamp(90px, 10vw, 148px);
   aspect-ratio: 1.15 / 1;
-  background: var(--white);
+  background: var(--lime);
   border-radius: 46% 54% 52% 48% / 50% 46% 54% 50%;
 }
 
-/* two stubs off the hub, meeting the buses at a right angle */
 .diagram-hub::before,
 .diagram-hub::after {
   content: "";
@@ -898,16 +884,19 @@ body.chips-in .chip:nth-child(4) { transition-delay: 0.54s; }
   gap: clamp(16px, 2.4vw, 44px);
   margin-top: clamp(26px, 4vw, 60px);
   padding-top: clamp(18px, 2.4vw, 34px);
-  border-top: 1px dashed rgba(200, 243, 84, 0.35);
+  border-top: 1px solid rgba(0, 0, 0, 0.14);
 }
 
 .details-label {
+  display: inline-block;
   margin: 0 0 0.9em;
+  padding-bottom: 0.5em;
+  border-bottom: 2px solid var(--pink);
   font-family: var(--mono);
   font-size: clamp(9px, 0.76vw, 11px);
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--lime);
+  color: rgba(0, 0, 0, 0.55);
 }
 
 .details-block p {
@@ -916,7 +905,7 @@ body.chips-in .chip:nth-child(4) { transition-delay: 0.54s; }
   font-weight: 500;
   font-size: clamp(11px, 0.92vw, 13.5px);
   line-height: 1.7;
-  color: rgba(255, 255, 255, 0.62);
+  color: rgba(0, 0, 0, 0.72);
 }
 
 /* narrow screens: stack everything, drop the connectors */
@@ -926,9 +915,7 @@ body.chips-in .chip:nth-child(4) { transition-delay: 0.54s; }
     align-items: start;
   }
 
-  .details-art {
-    height: clamp(120px, 34vw, 170px);
-  }
+  .details-art { height: clamp(120px, 34vw, 170px); }
 
   .details-diagram {
     grid-template-columns: minmax(0, 1fr);
@@ -943,10 +930,8 @@ body.chips-in .chip:nth-child(4) { transition-delay: 0.54s; }
     align-items: flex-start;
     text-align: left;
     gap: clamp(10px, 3vw, 16px);
+    border: 0;
   }
-
-  .diagram-side--left,
-  .diagram-side--right { border: 0; }
 
   .diagram-side--left .diagram-label::after,
   .diagram-side--right .diagram-label::before,
